@@ -1,0 +1,25 @@
+# --- Personal data: never commit ---
+*.local.json
+*.local.md
+*.local.*
+.env
+.env.*
+!.env.example
+export*.json
+/private/
+
+# --- Google / clasp credentials ---
+.clasprc.json
+.clasp.json
+creds.json
+credentials.json
+token.json
+
+# --- Build and tooling ---
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+

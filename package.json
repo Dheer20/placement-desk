@@ -1,0 +1,22 @@
+{
+  "name": "placement-desk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A free, self-hosted placement dashboard for students: reads placement emails read-only and tracks drives, deadlines, shortlists and to-dos in a Google Sheet.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "lint": "eslint .",
+    "build": "node scripts/build.js",
+    "check:personal": "node scripts/check-personal-data.js",
+    "check": "npm run lint && npm test && npm run build && npm run check:personal"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.12.0",
+    "globals": "17.13.0"
+  }
+}

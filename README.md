@@ -191,6 +191,11 @@ Some colleges block scripts on their accounts. Set your college mail to
 forward to a personal Gmail account (Gmail Settings > Forwarding) and
 install Placement Desk there.
 
+**Google says my storage is full.**
+A Google account with no storage left cannot create a new Sheet (and will
+soon stop receiving email too). Free some space at
+[one.google.com/storage](https://one.google.com/storage), then try again.
+
 **Dates are a day or a month out.**
 Check **Timezone** and **How dates are written in your emails** in Settings.
 

@@ -34,7 +34,12 @@ var PdMatch = (function () {
    * @return {Object} identity used by the matchers
    */
   function buildIdentity(profile) {
-    var identity = { names: [], nameKeys: {}, phrases: [], ids: {}, idList: [], emails: {}, emailList: [] };
+    // Lookup tables with no inherited properties: a list cell that says
+    // "constructor" or "toString" must not look like a match.
+    var identity = {
+      names: [], nameKeys: Object.create(null), phrases: [],
+      ids: Object.create(null), idList: [], emails: Object.create(null), emailList: []
+    };
     (profile.names || []).forEach(function (name) {
       var tokens = PdText.words(name);
       if (!tokens.length) return;

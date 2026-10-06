@@ -252,6 +252,13 @@ var PdDates = (function () {
     return parts.hasTime ? s + ' ' + pad(parts.h) + ':' + pad(parts.mi) : s;
   }
 
+  /** "06-10-2026" (or "10-06-2026" for month-first), the way students type dates. */
+  function toNumeric(parts, order) {
+    var day = pad(parts.d);
+    var month = pad(parts.m);
+    return (order === 'MDY' ? month + '-' + day : day + '-' + month) + '-' + parts.y;
+  }
+
   function fromIso(text) {
     var m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(String(text || ''));
     if (!m) return null;
@@ -281,6 +288,7 @@ var PdDates = (function () {
     toParts: toParts,
     endEpoch: endEpoch,
     toIso: toIso,
+    toNumeric: toNumeric,
     fromIso: fromIso,
     toHuman: toHuman,
     daysBetween: daysBetween,

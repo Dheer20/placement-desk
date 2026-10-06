@@ -12,7 +12,7 @@ var PdStore = (function () {
 
   var TAB = {
     dashboard: 'Dashboard', drives: 'Drives', lists: 'List checks', practice: 'Practice',
-    profile: 'Profile', settings: 'Settings', log: 'Log', seen: '_seen'
+    practiceLog: 'Practice log', profile: 'Profile', settings: 'Settings', log: 'Log', seen: '_seen'
   };
 
   var DRIVE_HEAD = [
@@ -22,6 +22,7 @@ var PdStore = (function () {
   // 1-based column numbers on the Drives tab.
   var COL = { mark: 1, text: 2, textCount: 12, form: 14, email: 15, updated: 16, notes: 17, key: 18, data: 19 };
   var LIST_HEAD = ['Checked', 'Company', 'Round', 'Looked in', 'Result', 'Matched by'];
+  var PRACTICE_LOG_HEAD = ['Date', 'Skill', 'My notes'];
   var PRACTICE_HEAD = ['Skill', 'Practise every (days)', 'Last practised', 'Days since', 'Status', 'Next task (link or note)', 'My notes'];
   var LOG_HEAD = ['When', 'Run', 'Emails found', 'New emails', 'Rows added', 'Rows updated', 'Left out', 'Never opened', 'Problems', 'Note'];
   var MAX_SEEN = 20000;
@@ -119,7 +120,7 @@ var PdStore = (function () {
     if (drives) tidyDrives(drives);
     var heads = [
       [TAB.drives, DRIVE_HEAD.length, LOOK.accent], [TAB.lists, LIST_HEAD.length, '#9ca3af'],
-      [TAB.practice, PRACTICE_HEAD.length, '#9ca3af'], [TAB.profile, 4, '#f59e0b'],
+      [TAB.practice, PRACTICE_HEAD.length, '#9ca3af'], [TAB.practiceLog, PRACTICE_LOG_HEAD.length, '#9ca3af'], [TAB.profile, 4, '#f59e0b'],
       [TAB.settings, 3, '#f59e0b'], [TAB.log, LOG_HEAD.length, '#9ca3af']
     ];
     heads.forEach(function (h) {
@@ -187,6 +188,8 @@ var PdStore = (function () {
       sh.getRange(2, 1, rows.length, PRACTICE_HEAD.length).setValues(rows);
       sh.setColumnWidth(1, 240).setColumnWidth(6, 280);
     });
+
+    make(TAB.practiceLog, PRACTICE_LOG_HEAD, 4, function (sh) { sh.setColumnWidth(1, 120).setColumnWidth(2, 260).setColumnWidth(3, 320); });
 
     make(TAB.profile, ['Field', 'Your answer', 'Also asked as (optional)', 'Tip'], 4, function (sh) {
       var rows = PdPrefill.FIELDS.map(function (f) { return [f.label, '', '', '']; });
@@ -350,6 +353,21 @@ var PdStore = (function () {
     return tableRows(TAB.practice, PRACTICE_HEAD.length).map(function (r) {
       return { name: r[0], everyDays: r[1], last: r[2], task: String(r[5] || '') };
     });
+  }
+
+  /**
+   * Record that the skill on `row` of the Practice tab was practised on `dateText`.
+   * Done only when the student asks for it from the menu.
+   * @return {string} the skill name, or '' when the row has no skill
+   */
+  function logPractice(row, dateText) {
+    var sh = sheet(TAB.practice);
+    if (!sh || row < 2) return '';
+    var skill = PdText.normalise(sh.getRange(row, 1).getValue());
+    if (!skill) return '';
+    plainText(sh.getRange(row, 3)).setValue(PdText.safeCell(dateText));
+    appendRows(TAB.practiceLog, PRACTICE_LOG_HEAD, [[dateText, skill, '']]);
+    return skill;
   }
 
   /** Write only the two tool columns (Days since, Status) on the Practice tab. */
@@ -575,6 +593,7 @@ var PdStore = (function () {
     readSeen: readSeen,
     writeSeen: writeSeen,
     readPractice: readPractice,
+    logPractice: logPractice,
     writePractice: writePractice,
     writeDashboard: writeDashboard
   };

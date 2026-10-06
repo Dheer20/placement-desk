@@ -85,8 +85,13 @@ var PdPlan = (function () {
       var y = urgency(b.item, nowMs, offsetFn);
       return x < y ? -1 : (x > y ? 1 : 0);
     });
+    // Names come from email subjects. In the summary email they are shown
+    // without any web address, so a crafted subject cannot plant a link.
+    function label(item) {
+      return PdText.truncate(String(item.company || item.title || '').replace(/(?:https?:\/\/|www\.)\S+/gi, '[link]'), 40);
+    }
     function names(list, max) {
-      var shown = list.slice(0, max).map(function (r) { return r.item.company || PdText.truncate(r.item.title, 30); });
+      var shown = list.slice(0, max).map(function (r) { return label(r.item); });
       return shown.join(', ') + (list.length > max ? ' +' + (list.length - max) + ' more' : '');
     }
     function within(iso, hours) {
@@ -99,7 +104,7 @@ var PdPlan = (function () {
     var onList = live.filter(function (r) { return r.item.shortlisted === 'found'; });
     if (onList.length) {
       var first = onList[0].item;
-      lines.push('On a list: ' + (first.company || first.title) + (first.eventDate ? ' (' + human(first.eventDate) + ')' : '') +
+      lines.push('On a list: ' + label(first) + (first.eventDate ? ' (' + human(first.eventDate) + ')' : '') +
         (onList.length > 1 ? ' +' + (onList.length - 1) + ' more' : ''));
     }
     var check = live.filter(function (r) { return r.item.shortlisted === 'possible' || r.item.shortlisted === 'unread'; });

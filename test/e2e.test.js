@@ -66,7 +66,7 @@ const company = (rows, name) => rows.find((r) => String(r.Company).startsWith(na
 
 test('e2e: setup creates every tab once and never overwrites what is there', () => {
   const { state, g } = start();
-  assert.deepEqual(['Dashboard', 'Drives', 'List checks', 'Practice', 'Profile', 'Settings', 'Log', '_seen'].map((n) => !!state.sheet(n)), Array(8).fill(true));
+  assert.deepEqual(['Dashboard', 'Drives', 'List checks', 'Practice', 'Practice log', 'Profile', 'Settings', 'Log', '_seen'].map((n) => !!state.sheet(n)), Array(9).fill(true));
   assert.equal(state.sheet('_seen').hidden, true);
   const before = JSON.stringify(state.sheet('Settings').table());
   g.pdSetup();
@@ -446,6 +446,31 @@ test('e2e: the practice tab is updated and the coldest skill reaches the summary
   assert.match(dashboard, /Practice that has gone cold/);
   assert.match(dashboard, /Linked lists, stacks, queues \| 25 days cold/);
   assert.ok(!/Not started/.test(dashboard), 'skills never started are not listed as cold');
+});
+
+test('e2e: one click logs today\'s practice on the selected skill', () => {
+  const { state, g } = start();
+  const practice = state.sheet('Practice');
+  state.activeSheet = practice;
+  practice.getActiveRange = () => ({ getRow: () => 3 });
+  g.pdLogPractice();
+
+  const today = new Date(Date.now() + 5.5 * 3600000);
+  const dd = String(today.getUTCDate()).padStart(2, '0');
+  const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
+  const stamp = dd + '-' + mm + '-' + today.getUTCFullYear();
+  assert.deepEqual(practice.table()[2].slice(0, 5), ['Linked lists, stacks, queues', '5', stamp, '0', 'On track']);
+  assert.deepEqual(state.sheet('Practice log').table(), [['Date', 'Skill', 'My notes'], [stamp, 'Linked lists, stacks, queues', '']]);
+  assert.match(state.toasts[state.toasts.length - 1], /^Logged for today: Linked lists/);
+
+  // Not on the Practice tab, or on the header row: nothing is written.
+  state.activeSheet = state.sheet('Drives');
+  state.sheet('Drives').getActiveRange = () => ({ getRow: () => 3 });
+  g.pdLogPractice();
+  practice.getActiveRange = () => ({ getRow: () => 1 });
+  state.activeSheet = practice;
+  g.pdLogPractice();
+  assert.equal(state.sheet('Practice log').table().length, 2);
 });
 
 test('e2e: a new user is not nagged about practice they have not started', () => {

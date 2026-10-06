@@ -17,7 +17,7 @@ var PdDedupe = (function () {
    */
   function companyKey(name) {
     var tokens = PdText.words(String(name || '').replace(/\([^)]*\)/g, ' '));
-    while (tokens.length > 1 && LEGAL_SUFFIX[tokens[tokens.length - 1]]) tokens.pop();
+    while (tokens.length > 1 && Object.prototype.hasOwnProperty.call(LEGAL_SUFFIX, tokens[tokens.length - 1])) tokens.pop();
     if (tokens.length > 1 && tokens[tokens.length - 1] === 'india' && tokens[tokens.length - 2] !== 'of') tokens.pop();
     return tokens.join(' ');
   }

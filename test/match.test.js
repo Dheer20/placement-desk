@@ -125,6 +125,14 @@ test('match: a one-word name in running text is only a "check this"', () => {
   assert.equal(status(PdMatch.matchCell('Asha', single)), 'found:name');
 });
 
+test('match: words that are built into JavaScript objects are not matches', () => {
+  for (const word of ['constructor', 'toString', 'valueOf', '__proto__', 'hasOwnProperty', 'CONSTRUCTOR', 'prototype']) {
+    assert.equal(PdMatch.matchCell(word, me).status, 'none', word);
+    assert.equal(PdMatch.matchRows([[word, 'x'], ['1', word]], me).status, 'none', word);
+    assert.equal(PdMatch.matchText('Shortlisted: ' + word + ' and others', me).status, 'none', word);
+  }
+});
+
 test('match: an empty profile never matches anything', () => {
   const nobody = PdMatch.buildIdentity({ names: ['', '  '], ids: ['', 'ab'], emails: ['not-an-email'] });
   assert.ok(PdMatch.isEmpty(nobody));

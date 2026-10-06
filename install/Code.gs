@@ -621,6 +621,13 @@ var PdDates = (function () {
     return parts.hasTime ? s + ' ' + pad(parts.h) + ':' + pad(parts.mi) : s;
   }
 
+  /** "06-10-2026" (or "10-06-2026" for month-first), the way students type dates. */
+  function toNumeric(parts, order) {
+    var day = pad(parts.d);
+    var month = pad(parts.m);
+    return (order === 'MDY' ? month + '-' + day : day + '-' + month) + '-' + parts.y;
+  }
+
   function fromIso(text) {
     var m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(String(text || ''));
     if (!m) return null;
@@ -650,6 +657,7 @@ var PdDates = (function () {
     toParts: toParts,
     endEpoch: endEpoch,
     toIso: toIso,
+    toNumeric: toNumeric,
     fromIso: fromIso,
     toHuman: toHuman,
     daysBetween: daysBetween,
@@ -677,7 +685,7 @@ var PdDedupe = (function () {
    */
   function companyKey(name) {
     var tokens = PdText.words(String(name || '').replace(/\([^)]*\)/g, ' '));
-    while (tokens.length > 1 && LEGAL_SUFFIX[tokens[tokens.length - 1]]) tokens.pop();
+    while (tokens.length > 1 && Object.prototype.hasOwnProperty.call(LEGAL_SUFFIX, tokens[tokens.length - 1])) tokens.pop();
     if (tokens.length > 1 && tokens[tokens.length - 1] === 'india' && tokens[tokens.length - 2] !== 'of') tokens.pop();
     return tokens.join(' ');
   }
@@ -1262,7 +1270,12 @@ var PdMatch = (function () {
    * @return {Object} identity used by the matchers
    */
   function buildIdentity(profile) {
-    var identity = { names: [], nameKeys: {}, phrases: [], ids: {}, idList: [], emails: {}, emailList: [] };
+    // Lookup tables with no inherited properties: a list cell that says
+    // "constructor" or "toString" must not look like a match.
+    var identity = {
+      names: [], nameKeys: Object.create(null), phrases: [],
+      ids: Object.create(null), idList: [], emails: Object.create(null), emailList: []
+    };
     (profile.names || []).forEach(function (name) {
       var tokens = PdText.words(name);
       if (!tokens.length) return;
@@ -1722,8 +1735,13 @@ var PdPlan = (function () {
       var y = urgency(b.item, nowMs, offsetFn);
       return x < y ? -1 : (x > y ? 1 : 0);
     });
+    // Names come from email subjects. In the summary email they are shown
+    // without any web address, so a crafted subject cannot plant a link.
+    function label(item) {
+      return PdText.truncate(String(item.company || item.title || '').replace(/(?:https?:\/\/|www\.)\S+/gi, '[link]'), 40);
+    }
     function names(list, max) {
-      var shown = list.slice(0, max).map(function (r) { return r.item.company || PdText.truncate(r.item.title, 30); });
+      var shown = list.slice(0, max).map(function (r) { return label(r.item); });
       return shown.join(', ') + (list.length > max ? ' +' + (list.length - max) + ' more' : '');
     }
     function within(iso, hours) {
@@ -1736,7 +1754,7 @@ var PdPlan = (function () {
     var onList = live.filter(function (r) { return r.item.shortlisted === 'found'; });
     if (onList.length) {
       var first = onList[0].item;
-      lines.push('On a list: ' + (first.company || first.title) + (first.eventDate ? ' (' + human(first.eventDate) + ')' : '') +
+      lines.push('On a list: ' + label(first) + (first.eventDate ? ' (' + human(first.eventDate) + ')' : '') +
         (onList.length > 1 ? ' +' + (onList.length - 1) + ' more' : ''));
     }
     var check = live.filter(function (r) { return r.item.shortlisted === 'possible' || r.item.shortlisted === 'unread'; });
@@ -1986,7 +2004,7 @@ var PdPrefill = (function () {
     data[1][1].forEach(function (item) {
       if (!Array.isArray(item)) return;
       var typeCode = item[3];
-      var type = TYPE[typeCode];
+      var type = Object.prototype.hasOwnProperty.call(TYPE, typeCode) ? TYPE[typeCode] : '';
       if (!type) return;
       var entry = Array.isArray(item[4]) && Array.isArray(item[4][0]) ? item[4][0] : null;
       var entryId = entry && (typeof entry[0] === 'number' || /^\d+$/.test(String(entry[0]))) ? String(entry[0]) : '';
@@ -2396,6 +2414,11 @@ var PdSubject = (function () {
     return 'info';
   }
 
+  /** Is `word` one of the set's own keys? (Words come from emails; "constructor" must not count.) */
+  function inSet(set, word) {
+    return Object.prototype.hasOwnProperty.call(set, word);
+  }
+
   function isCapital(token) {
     return /^[A-Z0-9(&]/.test(token);
   }
@@ -2406,7 +2429,7 @@ var PdSubject = (function () {
     for (var i = tokens.length - 1; i >= 0; i--) {
       var t = tokens[i];
       if (isCapital(t)) { out.unshift(t); continue; }
-      if (CONNECTOR[t.toLowerCase()] && out.length && i > 0 && isCapital(tokens[i - 1])) { out.unshift(t); continue; }
+      if (inSet(CONNECTOR, t.toLowerCase()) && out.length && i > 0 && isCapital(tokens[i - 1])) { out.unshift(t); continue; }
       break;
     }
     return out;
@@ -2419,12 +2442,12 @@ var PdSubject = (function () {
     while (tokens.length) {
       var last = tokens[tokens.length - 1];
       var parts = last.toLowerCase().split('/').filter(function (p) { return p !== ''; });
-      var noise = parts.length > 0 && parts.every(function (p) { return TAIL_NOISE[p] || /^\d+(?:st|nd|rd|th)$/.test(p); });
+      var noise = parts.length > 0 && parts.every(function (p) { return inSet(TAIL_NOISE, p) || /^\d+(?:st|nd|rd|th)$/.test(p); });
       if (!noise) break;
       tokens.pop();
     }
     tokens = trailingName(tokens);
-    while (tokens.length && (HEAD_NOISE[tokens[0].toLowerCase()] || /^20\d{2}$/.test(tokens[0]))) tokens.shift();
+    while (tokens.length && (inSet(HEAD_NOISE, tokens[0].toLowerCase()) || /^20\d{2}$/.test(tokens[0]))) tokens.shift();
     var name = tokens.join(' ').replace(/[\s,:;\-\u2013|]+$/, '');
     if (!name || tokens.length > 8 || name.length > 70) return '';
     if (!/[A-Za-z]/.test(name)) return '';
@@ -2783,7 +2806,7 @@ var PdText = (function () {
  * in the Pd* objects.
  */
 
-/* exported onOpen, pdSetup, pdRunNow, pdCatchUp, pdExample, pdExampleClear, pdScheduledRun, pdDailySweep, pdTurnOn, pdTurnOff, pdPrefillSelected, pdShowAnswers, pdHelp */
+/* exported onOpen, pdSetup, pdRunNow, pdCatchUp, pdExample, pdExampleClear, pdLogPractice, pdScheduledRun, pdDailySweep, pdTurnOn, pdTurnOff, pdPrefillSelected, pdShowAnswers, pdHelp */
 
 var PD_TIMED = ['pdScheduledRun', 'pdDailySweep'];
 
@@ -2799,6 +2822,7 @@ function onOpen() {
     .addItem('Catch up on the last few weeks', 'pdCatchUp')
     .addItem('Pre-fill the form for the selected row', 'pdPrefillSelected')
     .addItem('Show my copy-ready answers', 'pdShowAnswers')
+    .addItem('I practised the selected skill today', 'pdLogPractice')
     .addSeparator()
     .addItem('Turn off automatic checks', 'pdTurnOff')
     .addItem('Help and privacy', 'pdHelp')
@@ -2847,6 +2871,7 @@ function pdRedraw_() {
     return { item: e.item, mark: e.mark, todo: PdPlan.todo(e.item, e.mark, nowMs, offsetFn), row: e.row };
   });
   var coach = PdCoach.review(PdStore.readPractice(), PdDates.toParts(nowMs, offsetFn), config.settings.order);
+  PdStore.writePractice(coach.rows);
   PdStore.writeDashboard(PdPlan.dashboard(planned, { problems: [], practice: coach.rows, checkedMs: nowMs }, nowMs, offsetFn));
 }
 
@@ -2871,6 +2896,25 @@ function pdExampleClear() {
   PdStore.deleteDriveRows(rows);
   pdRedraw_();
   pdToast_(rows.length ? rows.length + ' example rows removed.' : 'There were no example rows.');
+}
+
+/** One click on the Practice tab: stamps today on the selected skill and adds a line to the Practice log. */
+function pdLogPractice() {
+  var active = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var row = active.getActiveRange().getRow();
+  if (active.getName() !== PdStore.TAB.practice || row < 2) {
+    pdToast_('Click a skill on the Practice tab first.');
+    return;
+  }
+  var settings = PdConfig.readSettings(PdStore.readSettingsRows()).settings;
+  var today = PdDates.toParts(Date.now(), PdRunner.offsetFor(settings.timezone));
+  var skill = PdStore.logPractice(row, PdDates.toNumeric(today, settings.order));
+  if (!skill) {
+    pdToast_('That row has no skill name.');
+    return;
+  }
+  pdRedraw_();
+  pdToast_('Logged for today: ' + skill);
 }
 
 function pdScheduledRun() {
@@ -3449,7 +3493,7 @@ var PdStore = (function () {
 
   var TAB = {
     dashboard: 'Dashboard', drives: 'Drives', lists: 'List checks', practice: 'Practice',
-    profile: 'Profile', settings: 'Settings', log: 'Log', seen: '_seen'
+    practiceLog: 'Practice log', profile: 'Profile', settings: 'Settings', log: 'Log', seen: '_seen'
   };
 
   var DRIVE_HEAD = [
@@ -3459,6 +3503,7 @@ var PdStore = (function () {
   // 1-based column numbers on the Drives tab.
   var COL = { mark: 1, text: 2, textCount: 12, form: 14, email: 15, updated: 16, notes: 17, key: 18, data: 19 };
   var LIST_HEAD = ['Checked', 'Company', 'Round', 'Looked in', 'Result', 'Matched by'];
+  var PRACTICE_LOG_HEAD = ['Date', 'Skill', 'My notes'];
   var PRACTICE_HEAD = ['Skill', 'Practise every (days)', 'Last practised', 'Days since', 'Status', 'Next task (link or note)', 'My notes'];
   var LOG_HEAD = ['When', 'Run', 'Emails found', 'New emails', 'Rows added', 'Rows updated', 'Left out', 'Never opened', 'Problems', 'Note'];
   var MAX_SEEN = 20000;
@@ -3556,7 +3601,7 @@ var PdStore = (function () {
     if (drives) tidyDrives(drives);
     var heads = [
       [TAB.drives, DRIVE_HEAD.length, LOOK.accent], [TAB.lists, LIST_HEAD.length, '#9ca3af'],
-      [TAB.practice, PRACTICE_HEAD.length, '#9ca3af'], [TAB.profile, 4, '#f59e0b'],
+      [TAB.practice, PRACTICE_HEAD.length, '#9ca3af'], [TAB.practiceLog, PRACTICE_LOG_HEAD.length, '#9ca3af'], [TAB.profile, 4, '#f59e0b'],
       [TAB.settings, 3, '#f59e0b'], [TAB.log, LOG_HEAD.length, '#9ca3af']
     ];
     heads.forEach(function (h) {
@@ -3624,6 +3669,8 @@ var PdStore = (function () {
       sh.getRange(2, 1, rows.length, PRACTICE_HEAD.length).setValues(rows);
       sh.setColumnWidth(1, 240).setColumnWidth(6, 280);
     });
+
+    make(TAB.practiceLog, PRACTICE_LOG_HEAD, 4, function (sh) { sh.setColumnWidth(1, 120).setColumnWidth(2, 260).setColumnWidth(3, 320); });
 
     make(TAB.profile, ['Field', 'Your answer', 'Also asked as (optional)', 'Tip'], 4, function (sh) {
       var rows = PdPrefill.FIELDS.map(function (f) { return [f.label, '', '', '']; });
@@ -3787,6 +3834,21 @@ var PdStore = (function () {
     return tableRows(TAB.practice, PRACTICE_HEAD.length).map(function (r) {
       return { name: r[0], everyDays: r[1], last: r[2], task: String(r[5] || '') };
     });
+  }
+
+  /**
+   * Record that the skill on `row` of the Practice tab was practised on `dateText`.
+   * Done only when the student asks for it from the menu.
+   * @return {string} the skill name, or '' when the row has no skill
+   */
+  function logPractice(row, dateText) {
+    var sh = sheet(TAB.practice);
+    if (!sh || row < 2) return '';
+    var skill = PdText.normalise(sh.getRange(row, 1).getValue());
+    if (!skill) return '';
+    plainText(sh.getRange(row, 3)).setValue(PdText.safeCell(dateText));
+    appendRows(TAB.practiceLog, PRACTICE_LOG_HEAD, [[dateText, skill, '']]);
+    return skill;
   }
 
   /** Write only the two tool columns (Days since, Status) on the Practice tab. */
@@ -4012,6 +4074,7 @@ var PdStore = (function () {
     readSeen: readSeen,
     writeSeen: writeSeen,
     readPractice: readPractice,
+    logPractice: logPractice,
     writePractice: writePractice,
     writeDashboard: writeDashboard
   };

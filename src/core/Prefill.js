@@ -111,7 +111,7 @@ var PdPrefill = (function () {
     data[1][1].forEach(function (item) {
       if (!Array.isArray(item)) return;
       var typeCode = item[3];
-      var type = TYPE[typeCode];
+      var type = Object.prototype.hasOwnProperty.call(TYPE, typeCode) ? TYPE[typeCode] : '';
       if (!type) return;
       var entry = Array.isArray(item[4]) && Array.isArray(item[4][0]) ? item[4][0] : null;
       var entryId = entry && (typeof entry[0] === 'number' || /^\d+$/.test(String(entry[0]))) ? String(entry[0]) : '';

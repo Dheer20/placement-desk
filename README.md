@@ -131,7 +131,8 @@ the rows can be removed from the same menu.
 | **Dashboard** | Start here. Your to-dos, soonest first; what is coming up; practice that is due. Redrawn on every check. |
 | **Drives** | One row per company with everything read from the emails. |
 | **List checks** | Every shortlist that was checked, and whether you were on it. |
-| **Practice** | Your skills and when you last practised each. |
+| **Practice** | Your skills, how often you want to practise each, and when you last did. |
+| **Practice log** | One line for every practice session you log. |
 | **Profile** | Your details, for list checks and forms. |
 | **Settings** | Your college's addresses, your batch and branch, and options. |
 | **Log** | When each check ran and how many emails it handled. |
@@ -177,6 +178,17 @@ for the selected row**.
 - If the form needs you to be signed in (many college forms do), it cannot
   be read from outside. You get a side panel with your answers ready to
   copy instead.
+
+### Practice
+
+The **Practice** tab starts with a short list of skills. Change it to suit
+you: rename them, add your own, set how many days is too long between
+sessions, and paste a link to your next task.
+
+When you finish a session, click the skill and choose
+**Placement Desk > I practised the selected skill today**. It stamps
+today's date and adds a line to the **Practice log**. A skill you have
+started and then left too long shows up on the Dashboard as "gone cold".
 
 ## Not only placements
 

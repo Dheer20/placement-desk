@@ -6,7 +6,7 @@
  * in the Pd* objects.
  */
 
-/* exported onOpen, pdSetup, pdRunNow, pdCatchUp, pdExample, pdExampleClear, pdScheduledRun, pdDailySweep, pdTurnOn, pdTurnOff, pdPrefillSelected, pdShowAnswers, pdHelp */
+/* exported onOpen, pdSetup, pdRunNow, pdCatchUp, pdExample, pdExampleClear, pdLogPractice, pdScheduledRun, pdDailySweep, pdTurnOn, pdTurnOff, pdPrefillSelected, pdShowAnswers, pdHelp */
 
 var PD_TIMED = ['pdScheduledRun', 'pdDailySweep'];
 
@@ -22,6 +22,7 @@ function onOpen() {
     .addItem('Catch up on the last few weeks', 'pdCatchUp')
     .addItem('Pre-fill the form for the selected row', 'pdPrefillSelected')
     .addItem('Show my copy-ready answers', 'pdShowAnswers')
+    .addItem('I practised the selected skill today', 'pdLogPractice')
     .addSeparator()
     .addItem('Turn off automatic checks', 'pdTurnOff')
     .addItem('Help and privacy', 'pdHelp')
@@ -70,6 +71,7 @@ function pdRedraw_() {
     return { item: e.item, mark: e.mark, todo: PdPlan.todo(e.item, e.mark, nowMs, offsetFn), row: e.row };
   });
   var coach = PdCoach.review(PdStore.readPractice(), PdDates.toParts(nowMs, offsetFn), config.settings.order);
+  PdStore.writePractice(coach.rows);
   PdStore.writeDashboard(PdPlan.dashboard(planned, { problems: [], practice: coach.rows, checkedMs: nowMs }, nowMs, offsetFn));
 }
 
@@ -94,6 +96,25 @@ function pdExampleClear() {
   PdStore.deleteDriveRows(rows);
   pdRedraw_();
   pdToast_(rows.length ? rows.length + ' example rows removed.' : 'There were no example rows.');
+}
+
+/** One click on the Practice tab: stamps today on the selected skill and adds a line to the Practice log. */
+function pdLogPractice() {
+  var active = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var row = active.getActiveRange().getRow();
+  if (active.getName() !== PdStore.TAB.practice || row < 2) {
+    pdToast_('Click a skill on the Practice tab first.');
+    return;
+  }
+  var settings = PdConfig.readSettings(PdStore.readSettingsRows()).settings;
+  var today = PdDates.toParts(Date.now(), PdRunner.offsetFor(settings.timezone));
+  var skill = PdStore.logPractice(row, PdDates.toNumeric(today, settings.order));
+  if (!skill) {
+    pdToast_('That row has no skill name.');
+    return;
+  }
+  pdRedraw_();
+  pdToast_('Logged for today: ' + skill);
 }
 
 function pdScheduledRun() {

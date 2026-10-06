@@ -81,6 +81,11 @@ var PdSubject = (function () {
     return 'info';
   }
 
+  /** Is `word` one of the set's own keys? (Words come from emails; "constructor" must not count.) */
+  function inSet(set, word) {
+    return Object.prototype.hasOwnProperty.call(set, word);
+  }
+
   function isCapital(token) {
     return /^[A-Z0-9(&]/.test(token);
   }
@@ -91,7 +96,7 @@ var PdSubject = (function () {
     for (var i = tokens.length - 1; i >= 0; i--) {
       var t = tokens[i];
       if (isCapital(t)) { out.unshift(t); continue; }
-      if (CONNECTOR[t.toLowerCase()] && out.length && i > 0 && isCapital(tokens[i - 1])) { out.unshift(t); continue; }
+      if (inSet(CONNECTOR, t.toLowerCase()) && out.length && i > 0 && isCapital(tokens[i - 1])) { out.unshift(t); continue; }
       break;
     }
     return out;
@@ -104,12 +109,12 @@ var PdSubject = (function () {
     while (tokens.length) {
       var last = tokens[tokens.length - 1];
       var parts = last.toLowerCase().split('/').filter(function (p) { return p !== ''; });
-      var noise = parts.length > 0 && parts.every(function (p) { return TAIL_NOISE[p] || /^\d+(?:st|nd|rd|th)$/.test(p); });
+      var noise = parts.length > 0 && parts.every(function (p) { return inSet(TAIL_NOISE, p) || /^\d+(?:st|nd|rd|th)$/.test(p); });
       if (!noise) break;
       tokens.pop();
     }
     tokens = trailingName(tokens);
-    while (tokens.length && (HEAD_NOISE[tokens[0].toLowerCase()] || /^20\d{2}$/.test(tokens[0]))) tokens.shift();
+    while (tokens.length && (inSet(HEAD_NOISE, tokens[0].toLowerCase()) || /^20\d{2}$/.test(tokens[0]))) tokens.shift();
     var name = tokens.join(' ').replace(/[\s,:;\-\u2013|]+$/, '');
     if (!name || tokens.length > 8 || name.length > 70) return '';
     if (!/[A-Za-z]/.test(name)) return '';

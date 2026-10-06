@@ -273,17 +273,17 @@ var PdStore = (function () {
     entries.forEach(function (e) {
       var i = e.row - 2;
       var d = PdPlan.display(e.item, e.todo, offsetFn);
-      text[i] = [d.todo, d.company, d.type, d.forMe, d.eligible, d.deadline, d.event, d.where, d.pay, d.role, d.list, d.latest].map(PdText.safeCell);
+      text[i] = [d.todo, d.company, d.type, d.forMe, d.eligible, d.deadline, d.event, d.where, d.pay, d.role, d.list, d.latest];
       links[i] = [
         linkCell('Open form', PdText.safeUrl(e.item.prefillUrl || e.item.formUrl)),
         linkCell('Open email', PdText.safeUrl(e.item.mailUrl))
       ];
-      updated[i] = [PdText.safeCell(d.updated)];
-      hidden[i] = [PdText.safeCell(e.item.key), PdText.safeCell(JSON.stringify(e.item))];
+      updated[i] = [d.updated];
+      hidden[i] = [e.item.key, JSON.stringify(e.item)];
     });
 
-    // Rows that were only read are written back too, so they are escaped
-    // again: a value read from a cell has lost its leading apostrophe.
+    // Everything is escaped here, once: new values, and rows that were only
+    // read (a value read from a cell has lost its leading apostrophe).
     function escaped(block) {
       return block.map(function (row) { return row.map(PdText.safeCell); });
     }

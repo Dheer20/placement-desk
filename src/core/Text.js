@@ -70,7 +70,11 @@ var PdText = (function () {
       .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
       .replace(/\r\n?/g, '\n');
     s = truncate(s, MAX_CELL);
-    if (/^[=+\-@\t\n]/.test(s)) s = "'" + s;
+    // Checked on a real Sheet: formatting a cell as plain text does NOT stop
+    // "=1+1" becoming a formula; only the leading apostrophe does. A value
+    // that itself starts with an apostrophe gets one too, or Sheets would
+    // swallow it.
+    if (/^[=+\-@\t\n']/.test(s)) s = "'" + s;
     return s;
   }
 

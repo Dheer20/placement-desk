@@ -10,6 +10,10 @@ test('text: cells that look like formulas are stored as plain text', () => {
   for (const evil of ['=1+1', '+SUM(A1)', '-2+3', '@SUM(A1)', '=IMPORTXML("https://x.example","//a")', '\t=1', '\n=1']) {
     assert.equal(String(PdText.safeCell(evil)).charAt(0), "'", JSON.stringify(evil));
   }
+  // Sheets swallows one leading apostrophe, so text that starts with one
+  // gets a second: "'=1+1" must be shown as written, never run.
+  assert.equal(PdText.safeCell("'=1+1"), "''=1+1");
+  assert.equal(PdText.safeCell("'quoted'"), "''quoted'");
   assert.equal(PdText.safeCell('Acme Robotics'), 'Acme Robotics');
   assert.equal(PdText.safeCell('6 LPA - fixed'), '6 LPA - fixed');
   assert.equal(PdText.safeCell(42), 42);

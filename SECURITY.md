@@ -31,7 +31,7 @@ assumes that **every subject line, body, attachment and link is hostile**.
 |---|---|
 | **The tool sends, deletes or alters mail** (bug or malicious change) | It holds only the `gmail.readonly` permission. Google refuses anything else. A test fails if a broader permission is added to the manifest. |
 | **It reads private mail** (OTPs, bank, personal) | Search exclusions, plus a second check on subject and sender before any body is fetched. The second check is tested with a mailbox that ignores the exclusions. |
-| **Formula injection:** a subject like `=IMPORTXML(...)` runs in the Sheet and leaks data | Every written cell is plain-text formatted and escaped with a leading apostrophe. Links are rich-text links, not formulas. Tested with hostile fixtures. |
+| **Formula injection:** a subject like `=IMPORTXML(...)` runs in the Sheet and leaks data | Every written value is escaped with a leading apostrophe, on first write and on every rewrite. Links are rich-text links, not formulas. Tested with hostile fixtures and confirmed on a real Sheet. |
 | **HTML or script injection** in the side panel | All values are HTML-escaped. Email text is never shown in the panel at all; only the student's own profile is. |
 | **Malicious links** (`javascript:`, look-alike hosts, `user@host` tricks) | Only `http(s)` links are kept. A form link must be exactly `docs.google.com/forms/...`; the host is parsed, not pattern-matched on the whole string. |
 | **Server-side request forgery:** an email makes the script fetch an attacker's URL | Fetching is off by default. When on, only `docs.google.com` form pages are requested, redirects are not followed, and the request carries no credentials. |

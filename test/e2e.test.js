@@ -60,6 +60,8 @@ function start(over) {
   return { state, g, run, drives, put };
 }
 
+/** The Dashboard as text: one line per row, empty layout cells dropped. */
+const dashboardText = (state) => state.sheet('Dashboard').table().map((r) => r.filter((c) => c !== '').join(' | ')).join('\n');
 const company = (rows, name) => rows.find((r) => String(r.Company).startsWith(name));
 
 test('e2e: setup creates every tab once and never overwrites what is there', () => {
@@ -70,6 +72,19 @@ test('e2e: setup creates every tab once and never overwrites what is there', () 
   g.pdSetup();
   assert.equal(JSON.stringify(state.sheet('Settings').table()), before);
   assert.match(state.toasts[state.toasts.length - 1], /already set up/);
+});
+
+test('e2e: setup removes the blank starter sheet, but never a sheet with anything in it', () => {
+  const blank = start();
+  blank.state.sheet('Drives').book.insertSheet('Sheet1');
+  blank.g.pdSetup();
+  assert.equal(blank.state.sheet('Sheet1'), undefined);
+
+  const used = start();
+  used.state.sheet('Drives').book.insertSheet('Sheet1');
+  used.state.sheet('Sheet1').cells.push(['my own notes']);
+  used.g.pdSetup();
+  assert.deepEqual(used.state.sheet('Sheet1').table(), [['my own notes']]);
 });
 
 test('e2e: a first check fills the dashboard with what is for this student', () => {
@@ -88,8 +103,10 @@ test('e2e: a first check fills the dashboard with what is for this student', () 
   assert.equal(stats.added, 3);
   assert.equal(stats.leftOut, 3, 'other branch, other batch and the newsletter');
   assert.equal(stats.problems, 0);
-  const dashboard = state.sheet('Dashboard').table().map((r) => r.join(' | ')).join('\n');
+  const dashboard = dashboardText(state);
   assert.match(dashboard, /Last checked: Mon 5 Oct, 6:00 PM/);
+  assert.match(dashboard, /^2 \| 0 \| 2 \| 1$/m, 'the number tiles: to do, on a list, closing soon, coming up');
+  assert.match(dashboard, /^To do \| On a list \| Closing within 36 hours \| Coming up in 14 days$/m);
   assert.match(dashboard, /Tue 6 Oct, 4:00 PM \| Register by Tue 6 Oct, 4:00 PM \| Acme Robotics India Private Limited \| Open form \| Open email/);
   const log = state.sheet('Log').table();
   assert.deepEqual(log[log.length - 1].slice(1, 9), ['scheduled', '6', '6', '3', '0', '3', '0', '0']);
@@ -386,7 +403,7 @@ test('e2e: the example fills the dashboard with made-up rows and removes them cl
   assert.deepEqual(rows.filter((r) => r._key).map((r) => r.Type), ['Placement drive', 'Internship drive', 'Shortlist', 'Test', 'Shortlist', 'Talk']);
   assert.match(company(rows, 'Acme')['To do'], /^Register by /);
   assert.equal(company(rows, 'Cobalt')['On the list?'], 'YES \u2013 you are on the list');
-  const dashboard = state.sheet('Dashboard').table().map((r) => r.join(' | ')).join('\n');
+  const dashboard = dashboardText(state);
   assert.match(dashboard, /You are on the list: Technical Interviews/);
   assert.deepEqual(state.metadataFetched, [], 'the example never touches Gmail');
 
@@ -425,7 +442,7 @@ test('e2e: the practice tab is updated and the coldest skill reaches the summary
   assert.deepEqual(practice.table()[1].slice(0, 5), ['Arrays and strings', '3', '04-10-2026', '1', 'On track']);
   assert.deepEqual(practice.table()[2].slice(3, 5), ['25', '25 days cold']);
   assert.deepEqual(practice.table()[3].slice(3, 5), ['', 'Not started']);
-  const dashboard = state.sheet('Dashboard').table().map((r) => r.join(' | ')).join('\n');
+  const dashboard = dashboardText(state);
   assert.match(dashboard, /Practice that has gone cold/);
   assert.match(dashboard, /Linked lists, stacks, queues \| 25 days cold/);
   assert.ok(!/Not started/.test(dashboard), 'skills never started are not listed as cold');
@@ -434,7 +451,7 @@ test('e2e: the practice tab is updated and the coldest skill reaches the summary
 test('e2e: a new user is not nagged about practice they have not started', () => {
   const { state, run } = start();
   run('scheduled', ist(2026, 10, 5, 18));
-  const dashboard = state.sheet('Dashboard').table().map((r) => r.join(' | ')).join('\n');
+  const dashboard = dashboardText(state);
   assert.match(dashboard, /Nothing has gone cold/);
   assert.ok(!/Not started/.test(dashboard));
   assert.ok(!/Practice:/.test(state.sent[0].body));

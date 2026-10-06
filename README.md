@@ -163,7 +163,28 @@ for the selected row**.
   be read from outside. You get a side panel with your answers ready to
   copy instead.
 
+## Not only placements
+
+The same engine works for any stream of email that has deadlines and
+lists. Add the sender's address under **Placement cell email addresses**
+in Settings and it is tracked the same way:
+
+- scholarships and fellowships ("last date to apply")
+- hackathons, competitions and club events
+- exam schedules, results and university circulars
+- off-campus applications and interview invitations sent to you by name
+
+Anything from a sender you add is kept, and a "last date", "deadline" or
+"register by" in it becomes a to-do. The row types are worded for
+placements today; switchable sets for other uses are on the roadmap.
+
 ## Questions
+
+**Can the "Google hasn't verified this app" warning be removed?**
+Not for a personal script. Google shows it for any script that reads mail
+and has not been through Google's app verification, a process built for
+published commercial products (for mail access it includes an independent
+security assessment). It appears once, the first time you authorise.
 
 **Is it safe to click through "Google hasn't verified this app"?**
 For a script you pasted into your own Sheet from a source you trust, yes.
@@ -190,6 +211,13 @@ with the names changed.
 Some colleges block scripts on their accounts. Set your college mail to
 forward to a personal Gmail account (Gmail Settings > Forwarding) and
 install Placement Desk there.
+
+**My placement mail is in another account, or spread over several.**
+A copy of the Sheet reads only the mailbox of the account it lives in. Pick
+one account to hold the Sheet and, in each other account, add a Gmail
+filter that forwards placement mail to it (Gmail Settings > Filters, and
+Forwarding). Forwarded mail keeps its original sender, so it is recognised
+as normal. Or make one copy of the Sheet per account.
 
 **Google says my storage is full.**
 A Google account with no storage left cannot create a new Sheet (and will
@@ -229,6 +257,19 @@ How and why it is built this way: [DECISIONS.md](DECISIONS.md). How to help,
 especially with your own college's email format:
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Roadmap
+
+- A browser bookmark that builds the pre-filled link for forms that need
+  sign-in.
+- Switchable sets of words for other uses (scholarships, job hunt, college
+  notices).
+- Reading shortlists sent as PDFs.
+- An optional, bring-your-own-key AI fallback for emails the rules cannot
+  read, off by default.
+
+Ideas and email formats from other colleges are welcome: see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Disclaimer
 
 Placement Desk is an independent, community project. It is not affiliated
@@ -237,6 +278,10 @@ assessment platform (such as CoCubes, AMCAT, eLitmus or SHL) or any
 employer. All product names belong to their owners. It is provided as is,
 without warranty: always confirm deadlines and shortlists in the original
 email.
+
+## Credits
+
+Built by [Dheer Parekh](https://github.com/Dheer20).
 
 ## Licence
 

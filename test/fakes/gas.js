@@ -242,6 +242,7 @@ function install(setup) {
     getSheetByName: (name) => { const s = sheets.find((x) => x.name === name); return s ? lenient(s) : null; },
     insertSheet(name) { const s = new FakeSheet(name, book); sheets.push(s); return lenient(s); },
     getSheets: () => sheets.map(lenient),
+    deleteSheet(target) { const i = sheets.findIndex((x) => x.name === target.getName()); if (i !== -1) sheets.splice(i, 1); },
     getUrl: () => 'https://docs.google.com/spreadsheets/d/FAKE_SHEET_ID/edit',
     toast: (message) => { state.toasts.push(message); },
     getActiveSheet: () => lenient(state.activeSheet || sheets[0]),

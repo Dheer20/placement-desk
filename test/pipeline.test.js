@@ -286,6 +286,40 @@ test('plan: the summary is never longer than six lines', () => {
   assert.match(s.lines[1], /^Check these lists yourself: /);
 });
 
+test('plan: every dashboard number counts exactly what the list below it shows', () => {
+  const now = at(2026, 10, 5, 18, 0);
+  const make = (over) => {
+    const item = Object.assign({}, run(mail.drive()).item, over);
+    return { item, mark: '', todo: PdPlan.todo(item, '', now, offsetFn) };
+  };
+  const rows = [
+    make({ key: 'a' }),
+    make({ key: 'b', deadline: '2026-10-09 16:00', eventDate: '2026-10-10 09:00' }),
+    make({ key: 'c', kind: 'shortlist', shortlisted: 'found', deadline: '', eventDate: '2026-10-08 10:00' }),
+    make({ key: 'd', kind: 'shortlist', shortlisted: 'unread', deadline: '', eventDate: '2026-10-30 10:00' }),
+    make({ key: 'e', deadline: '2026-10-01 16:00', eventDate: '2026-10-02 09:00' })
+  ];
+  const model = PdPlan.dashboard(rows, { problems: [], practice: [], checkedMs: now }, now, offsetFn);
+  assert.deepEqual(model.tiles.map((t) => [t.label, t.value, t.tone]), [
+    ['To do', '4', 'accent'],
+    ['On a list', '1', 'good'],
+    ['Closing within 36 hours', '1', 'warn'],
+    ['Coming up in 14 days', '3', 'quiet']
+  ]);
+  const todo = model.sections[0];
+  assert.equal(todo.rows.length, 4);
+  assert.deepEqual(todo.tones, ['warn', 'good', '', 'warn'], 'closing soon, on a list, later, unreadable list');
+  assert.equal(model.sections[1].rows.length, 3);
+});
+
+test('plan: with nothing to do the dashboard says so and offers the next step', () => {
+  const now = at(2026, 10, 5, 18, 0);
+  const model = PdPlan.dashboard([], { problems: [], practice: [], checkedMs: now }, now, offsetFn);
+  assert.deepEqual(model.tiles.map((t) => t.value), ['0', '0', '0', '0']);
+  assert.deepEqual(model.tiles.map((t) => t.tone), ['accent', 'quiet', 'quiet', 'quiet'], 'no alarm colours when there is nothing');
+  assert.match(model.sections[0].empty, /Check my email now/);
+});
+
 test('plan: with nothing to do there is nothing worth sending', () => {
   const s = PdPlan.summary([], { newKeys: [], nudge: '', sheetUrl: 'https://docs.google.com/spreadsheets/d/x' }, at(2026, 10, 5, 18, 0), offsetFn);
   assert.equal(s.worthSending, false);

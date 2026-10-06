@@ -40,8 +40,22 @@ var PdStore = (function () {
   }
 
   function writeHeader(sh, head) {
-    plainText(sh.getRange(1, 1, 1, head.length)).setValues([head]).setFontWeight('bold').setBackground('#e8eaed');
+    plainText(sh.getRange(1, 1, 1, head.length)).setValues([head]);
+    styleHeader(sh, head.length);
+  }
+
+  /** The dark title row every list tab shares. Layout only. */
+  function styleHeader(sh, columns) {
+    sh.getRange(1, 1, 1, columns).setFontWeight('bold').setFontFamily(LOOK.font)
+      .setBackground(LOOK.accent).setFontColor(LOOK.onAccent).setVerticalAlignment('middle');
+    sh.setRowHeightsForced(1, 1, 30);
     sh.setFrozenRows(1);
+  }
+
+  /** Light tint on the cells the student is meant to type in. */
+  function tintInputs(sh, column, columns) {
+    var rows = Math.max(sh.getLastRow() - 1, 1);
+    sh.getRange(2, column, rows, columns).setBackground(LOOK.input);
   }
 
   function ensure(name, head, index) {
@@ -78,10 +92,41 @@ var PdStore = (function () {
     ]);
   }
 
-  /** Re-apply the layout of the tool's tabs. Safe to run at any time. */
+  /**
+   * A new spreadsheet starts with one blank "Sheet1". During setup, if it is
+   * still completely blank, it is removed so the Dashboard is the first tab.
+   * A sheet with anything at all in it is never removed.
+   */
+  function removeSpareSheet() {
+    var spare = sheet('Sheet1');
+    if (spare && spare.getLastRow() === 0 && spare.getLastColumn() === 0 && book().getSheets().length > 1) {
+      book().deleteSheet(spare);
+      return true;
+    }
+    return false;
+  }
+
+  /** Re-apply the layout of the tool's tabs. Safe to run at any time: no value is touched. */
   function tidy() {
     var drives = sheet(TAB.drives);
     if (drives) tidyDrives(drives);
+    var heads = [
+      [TAB.drives, DRIVE_HEAD.length, LOOK.accent], [TAB.lists, LIST_HEAD.length, '#9ca3af'],
+      [TAB.practice, PRACTICE_HEAD.length, '#9ca3af'], [TAB.profile, 4, '#f59e0b'],
+      [TAB.settings, 3, '#f59e0b'], [TAB.log, LOG_HEAD.length, '#9ca3af']
+    ];
+    heads.forEach(function (h) {
+      var sh = sheet(h[0]);
+      if (!sh) return;
+      styleHeader(sh, h[1]);
+      sh.setTabColor(h[2]);
+    });
+    var profile = sheet(TAB.profile);
+    if (profile) tintInputs(profile, 2, 2);
+    var settings = sheet(TAB.settings);
+    if (settings) tintInputs(settings, 2, 1);
+    var practice = sheet(TAB.practice);
+    if (practice) tintInputs(practice, 3, 1);
   }
 
   /** The "My mark" dropdown, on the rows that hold drives (not a thousand empty ones). */
@@ -106,11 +151,21 @@ var PdStore = (function () {
       if (fill) fill(sh);
     }
 
-    make(TAB.dashboard, null, 0, function (sh) {
-      plainText(sh.getRange(1, 1, sh.getMaxRows(), 5));
-      sh.getRange(1, 1).setValue('Placement Desk').setFontWeight('bold').setFontSize(14);
-      sh.getRange(2, 1).setValue('Fill in the Settings and Profile tabs, then choose Placement Desk > Check my email now.');
-      sh.setColumnWidth(1, 170).setColumnWidth(2, 380).setColumnWidth(3, 240).setColumnWidth(4, 110).setColumnWidth(5, 110);
+    make(TAB.dashboard, null, 0, function () {
+      writeDashboard({
+        title: 'Placement Desk',
+        checked: 'Not checked yet',
+        next: { text: 'Set up, then check your email.', tone: 'quiet' },
+        problems: [],
+        tiles: [
+          { value: '0', label: 'To do', tone: 'accent' }, { value: '0', label: 'On a list', tone: 'quiet' },
+          { value: '0', label: 'Closing within 36 hours', tone: 'quiet' }, { value: '0', label: 'Coming up in 14 days', tone: 'quiet' }
+        ],
+        sections: [{
+          id: 'todo', title: 'Start here', header: [], rows: [], tones: [],
+          empty: 'Fill in the Settings and Profile tabs, then choose Placement Desk > Check my email now. To look around first, choose See an example first.'
+        }]
+      });
     });
 
     make(TAB.drives, DRIVE_HEAD, 1, function (sh) {
@@ -143,6 +198,7 @@ var PdStore = (function () {
     make(TAB.log, LOG_HEAD, 6);
 
     make(TAB.seen, ['id', 'ms'], 7, function (sh) { sh.hideSheet(); });
+
     return created;
   }
 
@@ -297,49 +353,195 @@ var PdStore = (function () {
     plainText(sh.getRange(2, 4, values.length, 2)).setValues(values);
   }
 
-  /** Redraw the Dashboard tab. It is tool-owned: nothing typed there is kept. */
+  // ---- Dashboard look -------------------------------------------------------
+  // One accent colour, black text, grey for secondary. Green and amber are
+  // used only where they mean something (on a list / look at this soon).
+  var LOOK = {
+    font: 'Roboto',
+    ink: '#1f2937', muted: '#6b7280', line: '#e5e7eb', page: '#ffffff', zebra: '#f8fafc',
+    accent: '#1e3a5f', onAccent: '#ffffff', onAccentSoft: '#c7d5e6',
+    tile: { accent: ['#e8eef5', '#1e3a5f'], good: ['#dcfce7', '#166534'], warn: ['#fef3c7', '#92400e'], quiet: ['#f3f4f6', '#374151'] },
+    tone: { good: '#166534', warn: '#92400e' },
+    input: '#fff8e1'
+  };
+  var GRID = 12;
+  var GRID_WIDTH = 78;
+  var MARGIN_WIDTH = 24;
+  // How many grid columns each table column takes, per section.
+  var SPANS = { todo: [2, 5, 3, 1, 1], coming: [2, 2, 3, 3, 2], practice: [4, 3, 5] };
+  var FULL = [GRID];
+
+  /**
+   * Redraw the Dashboard tab. It is tool-owned: nothing typed there is kept.
+   *
+   * The tab is laid out on a 12-column grid with a margin either side, the
+   * way a web page is: a title band, a row of number tiles, then the lists.
+   * Text is written once as plain text; colours, sizes and merges are
+   * applied afterwards and never carry email content.
+   */
   function writeDashboard(model) {
     var sh = sheet(TAB.dashboard) || ensure(TAB.dashboard, null, 0);
-    var width = 5;
-    var text = [];
-    var rich = [];
-    var bold = [];
-    function push(cells, isBold) {
-      var row = [];
-      var links = [];
-      for (var c = 0; c < width; c++) {
-        var cell = c < cells.length ? cells[c] : '';
-        if (cell && typeof cell === 'object') { row.push(''); links.push(cell); } else { row.push(PdText.safeCell(cell)); links.push(null); }
-      }
-      text.push(row);
-      rich.push(links);
-      bold.push(!!isBold);
+    var width = GRID + 2;
+    var lines = [];
+    function add(kind, values, spans, extra) {
+      var line = { kind: kind, values: values || [], spans: spans || FULL, tone: '', zebra: false };
+      if (extra) { line.tone = extra.tone || ''; line.zebra = !!extra.zebra; }
+      lines.push(line);
     }
 
-    push([model.title], true);
-    push([model.checked]);
-    model.problems.forEach(function (p) { push(['Fix: ' + p]); });
-    model.sections.forEach(function (section) {
-      push(['']);
-      push([section.title], true);
-      if (!section.rows.length) { push([section.empty]); return; }
-      push(section.header, true);
-      section.rows.forEach(function (r) { push(r); });
+    add('band-pad');
+    add('title', [model.title]);
+    add('subtitle', [model.checked]);
+    add('band-pad');
+    add('gap');
+    add('next', ['Next up', model.next.text], [2, GRID - 2], { tone: model.next.tone });
+    add('gap');
+    var tileSpans = model.tiles.map(function () { return GRID / model.tiles.length; });
+    add('tile-number', model.tiles.map(function (t) { return t.value; }), tileSpans);
+    add('tile-label', model.tiles.map(function (t) { return t.label; }), tileSpans);
+    model.problems.forEach(function (p, i) {
+      if (i === 0) add('gap');
+      add('problem', ['Fix this: ' + p]);
     });
-    push(['']);
-    push(['This tab is redrawn on every check. Keep your own notes in Drives > My notes.']);
+    model.sections.forEach(function (section) {
+      add('gap');
+      add('section', [section.title]);
+      if (!section.rows.length) { add('empty', [section.empty]); return; }
+      var spans = SPANS[section.id] || FULL;
+      add('head', section.header, spans);
+      section.rows.forEach(function (r, i) { add('row', r, spans, { tone: section.tones[i], zebra: i % 2 === 1 }); });
+    });
+    add('gap');
+    add('foot', ['This tab is redrawn on every check. Keep your own notes in Drives > My notes.']);
 
+    // ---- text ---------------------------------------------------------------
+    var n = lines.length;
+    var text = [];
+    var links = [];
+    lines.forEach(function (line, r) {
+      var row = [];
+      for (var c = 0; c < width; c++) row.push('');
+      var at = 1;
+      line.spans.forEach(function (span, i) {
+        var value = i < line.values.length ? line.values[i] : '';
+        if (value && typeof value === 'object') {
+          if (PdText.safeUrl(value.url)) links.push({ row: r + 1, col: at + 1, text: value.text, url: PdText.safeUrl(value.url) });
+        } else {
+          row[at] = PdText.safeCell(value);
+        }
+        at += span;
+      });
+      text.push(row);
+    });
+
+    sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).breakApart();
     sh.clear();
-    var range = plainText(sh.getRange(1, 1, text.length, width));
-    range.setValues(text);
-    for (var r = 0; r < text.length; r++) {
-      if (bold[r]) sh.getRange(r + 1, 1, 1, width).setFontWeight('bold');
-      for (var c = 0; c < width; c++) {
-        var link = rich[r][c];
-        if (link && PdText.safeUrl(link.url)) sh.getRange(r + 1, c + 1).setRichTextValue(linkCell(link.text, PdText.safeUrl(link.url)));
+    plainText(sh.getRange(1, 1, n, width)).setValues(text);
+    links.forEach(function (link) { sh.getRange(link.row, link.col).setRichTextValue(linkCell(link.text, link.url)); });
+
+    // ---- look ---------------------------------------------------------------
+    var bg = [];
+    var fg = [];
+    var weight = [];
+    var size = [];
+    var align = [];
+    var style = [];
+    lines.forEach(function (line) {
+      var rowBg = LOOK.page;
+      var rowFg = LOOK.ink;
+      var rowWeight = 'normal';
+      var rowSize = 10;
+      var rowAlign = 'left';
+      var rowStyle = 'normal';
+      if (line.kind === 'band-pad' || line.kind === 'title' || line.kind === 'subtitle') rowBg = LOOK.accent;
+      if (line.kind === 'title') { rowFg = LOOK.onAccent; rowWeight = 'bold'; rowSize = 20; }
+      if (line.kind === 'subtitle') { rowFg = LOOK.onAccentSoft; }
+      if (line.kind === 'section') { rowWeight = 'bold'; rowSize = 13; rowFg = LOOK.accent; }
+      if (line.kind === 'head') { rowFg = LOOK.muted; rowWeight = 'bold'; rowSize = 9; }
+      if (line.kind === 'row' && line.zebra) rowBg = LOOK.zebra;
+      if (line.kind === 'empty' || line.kind === 'foot') { rowFg = LOOK.muted; rowStyle = 'italic'; }
+      if (line.kind === 'foot') rowSize = 9;
+      if (line.kind === 'problem') { rowBg = LOOK.tile.warn[0]; rowFg = LOOK.tile.warn[1]; }
+      if (line.kind === 'next') {
+        var nextTone = LOOK.tile[line.tone] || LOOK.tile.quiet;
+        rowBg = nextTone[0]; rowFg = nextTone[1]; rowWeight = 'bold'; rowSize = 13;
       }
+      var b = []; var f = []; var w = []; var s = []; var a = []; var st = [];
+      for (var c = 0; c < width; c++) { b.push(rowBg); f.push(rowFg); w.push(rowWeight); s.push(rowSize); a.push(rowAlign); st.push(rowStyle); }
+      if (line.kind === 'band-pad' || line.kind === 'title' || line.kind === 'subtitle') { /* band runs edge to edge */ } else { b[0] = LOOK.page; b[width - 1] = LOOK.page; }
+      if (line.kind === 'tile-number' || line.kind === 'tile-label') {
+        var at = 1;
+        line.spans.forEach(function (span, i) {
+          var tone = LOOK.tile[model.tiles[i].tone] || LOOK.tile.quiet;
+          for (var k = at; k < at + span; k++) {
+            b[k] = tone[0]; f[k] = tone[1]; a[k] = 'center';
+            if (line.kind === 'tile-number') { w[k] = 'bold'; s[k] = 24; } else { s[k] = 10; }
+          }
+          at += span;
+        });
+      }
+      if (line.kind === 'row' && line.tone && LOOK.tone[line.tone]) {
+        // The "What" cell is the second column of the list.
+        var what = 1 + line.spans[0];
+        for (var q = what; q < what + line.spans[1]; q++) { f[q] = LOOK.tone[line.tone]; w[q] = 'bold'; }
+      }
+      bg.push(b); fg.push(f); weight.push(w); size.push(s); align.push(a); style.push(st);
+    });
+
+    var all = sh.getRange(1, 1, n, width);
+    all.setFontFamily(LOOK.font).setVerticalAlignment('middle').setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    all.setBackgrounds(bg);
+    all.setFontColors(fg);
+    all.setFontWeights(weight);
+    all.setFontSizes(size);
+    all.setHorizontalAlignments(align);
+    all.setFontStyles(style);
+
+    sh.setHiddenGridlines(true);
+    sh.setColumnWidth(1, MARGIN_WIDTH);
+    sh.setColumnWidths(2, GRID, GRID_WIDTH);
+    sh.setColumnWidth(width, MARGIN_WIDTH);
+    sh.setRowHeightsForced(1, n, 27);
+
+    // Merge each run of rows that share a layout in one call per column.
+    var start = 0;
+    while (start < n) {
+      var end = start;
+      var signature = lines[start].spans.join(',');
+      while (end + 1 < n && lines[end + 1].spans.join(',') === signature) end++;
+      var col = 2;
+      lines[start].spans.forEach(function (span) {
+        if (span > 1) sh.getRange(start + 1, col, end - start + 1, span).mergeAcross();
+        col += span;
+      });
+      start = end + 1;
     }
-    sh.getRange(1, 1).setFontSize(14);
+
+    lines.forEach(function (line, r) {
+      var row = r + 1;
+      if (line.kind === 'band-pad') sh.setRowHeightsForced(row, 1, 10);
+      if (line.kind === 'title') sh.setRowHeightsForced(row, 1, 40);
+      if (line.kind === 'gap') sh.setRowHeightsForced(row, 1, 16);
+      if (line.kind === 'tile-number') sh.setRowHeightsForced(row, 1, 48);
+      if (line.kind === 'tile-label') sh.setRowHeightsForced(row, 1, 28);
+      if (line.kind === 'next') {
+        sh.setRowHeightsForced(row, 1, 40);
+        sh.getRange(row, 2).setFontSize(9).setHorizontalAlignment('center');
+      }
+      if (line.kind === 'section') {
+        sh.setRowHeightsForced(row, 1, 34);
+        sh.getRange(row, 2, 1, GRID).setBorder(false, false, true, false, false, false, LOOK.line, SpreadsheetApp.BorderStyle.SOLID);
+      }
+      if (line.kind === 'tile-number') {
+        // White rules between the tiles read as gaps between cards.
+        var col = 2;
+        line.spans.forEach(function (span) {
+          sh.getRange(row, col, 2, span).setBorder(null, true, null, true, null, null, LOOK.page, SpreadsheetApp.BorderStyle.SOLID_THICK);
+          col += span;
+        });
+      }
+    });
+    sh.setTabColor(LOOK.accent);
   }
 
   return {
@@ -349,6 +551,7 @@ var PdStore = (function () {
     book: book,
     sheet: sheet,
     ensureTabs: ensureTabs,
+    removeSpareSheet: removeSpareSheet,
     tidy: tidy,
     readSettingsRows: readSettingsRows,
     readProfileRows: readProfileRows,

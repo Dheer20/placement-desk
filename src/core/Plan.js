@@ -167,19 +167,36 @@ var PdPlan = (function () {
       return item.company || PdText.truncate(item.title, 60);
     }
 
-    var todos = rows.filter(function (r) { return r.todo; }).sort(byUrgency).slice(0, 40).map(function (r) {
+    function hoursLeft(iso) {
+      var parts = PdDates.fromIso(iso);
+      return parts ? (PdDates.endEpoch(parts, offsetFn) - nowMs) / 3600000 : Infinity;
+    }
+
+    var live = rows.filter(function (r) { return r.todo; }).sort(byUrgency);
+    var todos = live.slice(0, 40).map(function (r) {
       return [when(r.item), r.todo, name(r.item), link('Open form', r.item.prefillUrl || r.item.formUrl), link('Open email', r.item.mailUrl)];
     });
+    // Colour carries meaning, nothing else: green for "you are on a list",
+    // amber for "look at this soon".
+    var tones = live.slice(0, 40).map(function (r) {
+      if (/^You are on the list/.test(r.todo)) return 'good';
+      if (/^(?:Check the list|Open the email)/.test(r.todo)) return 'warn';
+      var soonest = urgency(r.item, nowMs, offsetFn);
+      return soonest !== '9999' && hoursLeft(soonest) <= 36 ? 'warn' : '';
+    });
+    var onList = live.filter(function (r) { return r.item.shortlisted === 'found'; }).length;
+    var closing = live.filter(function (r) { return /^Register by/.test(r.todo) && hoursLeft(r.item.deadline) <= 36; }).length;
 
     var horizon = nowMs + 14 * DAY_MS;
-    var coming = rows.filter(function (r) {
+    var comingAll = rows.filter(function (r) {
       var m = mark(r.mark);
       if (m === 'skip' || m === 'not applicable' || m === 'hidden') return false;
       var parts = PdDates.fromIso(r.item.eventDate);
       if (!parts) return false;
       var end = PdDates.endEpoch(parts, offsetFn);
       return end >= nowMs && end <= horizon;
-    }).sort(function (a, b) { return a.item.eventDate < b.item.eventDate ? -1 : 1; }).slice(0, 25).map(function (r) {
+    }).sort(function (a, b) { return a.item.eventDate < b.item.eventDate ? -1 : 1; });
+    var coming = comingAll.slice(0, 25).map(function (r) {
       return [human(r.item.eventDate), PdSubject.KIND_LABEL[r.item.kind] || '', name(r.item), r.item.venue || '', mark(r.mark) === 'applied' ? 'Applied' : ''];
     });
 
@@ -193,10 +210,21 @@ var PdPlan = (function () {
       title: 'Placement Desk',
       checked: 'Last checked: ' + PdDates.toHuman(checked),
       problems: extra.problems || [],
+      // The one thing to look at first: the most urgent to-do, in words.
+      next: live.length
+        ? { text: name(live[0].item) + ': ' + live[0].todo, tone: tones[0] || 'accent' }
+        : { text: 'You are all caught up.', tone: 'quiet' },
+      // Each number is counted the same way as the list below it.
+      tiles: [
+        { value: String(live.length), label: 'To do', tone: 'accent' },
+        { value: String(onList), label: 'On a list', tone: onList ? 'good' : 'quiet' },
+        { value: String(closing), label: 'Closing within 36 hours', tone: closing ? 'warn' : 'quiet' },
+        { value: String(comingAll.length), label: 'Coming up in 14 days', tone: 'quiet' }
+      ],
       sections: [
-        { title: 'To do', header: ['When', 'What', 'Company', 'Form', 'Email'], rows: todos, empty: 'Nothing to do right now.' },
-        { title: 'Coming up (next 14 days)', header: ['When', 'What', 'Company', 'Where', 'Your mark'], rows: coming, empty: 'Nothing scheduled.' },
-        { title: 'Practice that has gone cold', header: ['Skill', 'Status', 'Next task'], rows: practice, empty: 'Nothing has gone cold. To track a skill, put a date under Practice > Last practised.' }
+        { id: 'todo', title: 'To do', header: ['When', 'What', 'Company', 'Form', 'Email'], rows: todos, tones: tones, empty: 'Nothing to do right now. To look for new email, choose Placement Desk > Check my email now.' },
+        { id: 'coming', title: 'Coming up (next 14 days)', header: ['When', 'What', 'Company', 'Where', 'Your mark'], rows: coming, tones: [], empty: 'Nothing scheduled in the next 14 days.' },
+        { id: 'practice', title: 'Practice that has gone cold', header: ['Skill', 'Status', 'Next task'], rows: practice, tones: [], empty: 'Nothing has gone cold. To track a skill, put a date under Practice > Last practised.' }
       ]
     };
   }

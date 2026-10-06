@@ -198,10 +198,15 @@ var PdStore = (function () {
       hidden[i] = [PdText.safeCell(e.item.key), PdText.safeCell(JSON.stringify(e.item))];
     });
 
-    plainText(textRange).setValues(text);
+    // Rows that were only read are written back too, so they are escaped
+    // again: a value read from a cell has lost its leading apostrophe.
+    function escaped(block) {
+      return block.map(function (row) { return row.map(PdText.safeCell); });
+    }
+    plainText(textRange).setValues(escaped(text));
     linkRange.setRichTextValues(links);
-    plainText(updatedRange).setValues(updated);
-    plainText(hiddenRange).setValues(hidden);
+    plainText(updatedRange).setValues(escaped(updated));
+    plainText(hiddenRange).setValues(escaped(hidden));
   }
 
   /** Delete the given rows of the Drives tab (whole rows, bottom first). */

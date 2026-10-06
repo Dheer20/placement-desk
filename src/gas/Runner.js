@@ -85,7 +85,11 @@ var PdRunner = (function () {
         ids = ids.concat(PdMail.search(q.query, MAX_IDS));
       });
       var seen = PdStore.readSeen();
-      var fresh = PdDedupe.unseen(ids, seen).reverse();
+      // Gmail ids grow with time, so sorting them handles the oldest email
+      // first: a drive notice is seen before its own shortlist.
+      var fresh = PdDedupe.unseen(ids, seen).sort(function (a, b) {
+        return a.length !== b.length ? a.length - b.length : (a < b ? -1 : (a > b ? 1 : 0));
+      });
       stats.found = PdDedupe.unseen(ids, {}).length;
       stats.fresh = fresh.length;
 

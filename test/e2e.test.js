@@ -211,6 +211,31 @@ test('e2e: text from an email can never become a formula or a script', () => {
   assert.match(falcon['Latest email'], /^=IMPORTXML/, 'shown as text; the fake sheet recorded no formula');
 });
 
+test('e2e: hostile text stays plain text when rows are rewritten later', () => {
+  const { state, run, g } = start({ web: { [form.FORM_URL]: { code: 200, body: form.page(form.loadData) } } });
+  run('scheduled', ist(2026, 10, 5, 18));
+  const sheet = state.sheet('Drives');
+  // A row the student typed themselves, starting with a formula character.
+  sheet.cells.push(['', '=1+1', '+Gale Systems', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+  run('scheduled', ist(2026, 10, 6, 10));
+  run('scheduled', ist(2026, 10, 8, 14));
+  state.activeSheet = sheet;
+  const row = sheet.cells.findIndex((r) => String(r[2]).startsWith('Acme')) + 1;
+  sheet.getActiveRange = () => ({ getRow: () => row });
+  g.pdPrefillSelected();
+  for (const s of sheet.book.getSheets()) assert.deepEqual(s.formulas, [], 'a formula was written to ' + s.getName());
+  assert.match(String(sheet.cells.find((r) => String(r[2]).startsWith('Falcon'))[12]), /^=IMPORTXML/);
+});
+
+test('e2e: emails are handled oldest first, so a shortlist joins its drive even in one batch', () => {
+  const { run, drives } = start();
+  run('catchup', ist(2026, 10, 9, 9));
+  const rows = drives();
+  assert.equal(rows.filter((r) => String(r.Company).startsWith('Borealis')).length, 1, 'internship notice and its shortlist share a row');
+  assert.equal(rows.filter((r) => String(r.Company).startsWith('Acme')).length, 1);
+  assert.equal(company(rows, 'Borealis')['On the list?'], 'YES \u2013 you are on the list');
+});
+
 test('e2e: checking twice changes nothing the second time', () => {
   const { state, run } = start();
   run('scheduled', ist(2026, 10, 5, 18));
@@ -360,7 +385,7 @@ test('e2e: the example fills the dashboard with made-up rows and removes them cl
   assert.equal(rows.filter((r) => String(r._key).startsWith('demo:')).length, 6);
   assert.deepEqual(rows.filter((r) => r._key).map((r) => r.Type), ['Placement drive', 'Internship drive', 'Shortlist', 'Test', 'Shortlist', 'Talk']);
   assert.match(company(rows, 'Acme')['To do'], /^Register by /);
-  assert.equal(company(rows, 'Cobalt')['On the list?'], 'YES – you are on the list');
+  assert.equal(company(rows, 'Cobalt')['On the list?'], 'YES \u2013 you are on the list');
   const dashboard = state.sheet('Dashboard').table().map((r) => r.join(' | ')).join('\n');
   assert.match(dashboard, /You are on the list: Technical Interviews/);
   assert.deepEqual(state.metadataFetched, [], 'the example never touches Gmail');

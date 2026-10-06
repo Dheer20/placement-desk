@@ -1,0 +1,39 @@
+name: Something is not working
+description: An error, a wrong result, or a step in the setup that failed
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste real emails, names, roll numbers or screenshots of your inbox.** Describe the problem in words, or with made-up data. Security problems go to the Security tab, not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you clicked, in order
+      placeholder: "1. Placement Desk > Check my email now  2. ..."
+  - type: textarea
+    id: message
+    attributes:
+      label: Any message shown (from the Sheet, or from Extensions > Apps Script > Executions)
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Copied the template Sheet
+        - Pasted the code myself
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before you submit
+      options:
+        - label: Nothing above is a real name, roll number, phone number, email address or college.
+          required: true

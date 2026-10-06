@@ -1,0 +1,33 @@
+name: Email format not understood
+description: Placement Desk misread or missed an email from your college
+labels: [email-format]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste a real email.** Rewrite it first: change every person, company, college, phone number and link to something made up, and keep the punctuation, separators and date style exactly as they were. See CONTRIBUTING.md.
+  - type: textarea
+    id: subject
+    attributes:
+      label: The subject line, rewritten with made-up names
+      placeholder: "Acme Robotics Recruitment drive for BE/BTech (CS/IT) 2027 Batch scheduled on 7th October 2026 at 9:00 a.m. || CTC : 6 LPA ||"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have been read from it
+      placeholder: "Company: Acme Robotics. Type: placement drive. Date: 7 Oct, 9:00 AM. For: CS/IT, 2027."
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What the dashboard showed instead
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before you submit
+      options:
+        - label: Nothing above is a real name, roll number, phone number, email address, college or link.
+          required: true

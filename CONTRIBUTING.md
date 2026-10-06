@@ -87,7 +87,7 @@ reasons are written down there.
 
 ## Trying your change in a real Sheet
 
-1. `npm run build` writes `dist/Code.gs` and `dist/appsscript.json`.
+1. `npm run build` writes `install/Code.gs` and `install/appsscript.json`. Commit them with your change; CI fails if they do not match the source.
 2. In a test Sheet: Extensions > Apps Script. Paste `Code.gs` over the
    code. In Project Settings, tick "Show appsscript.json", then paste the
    manifest.

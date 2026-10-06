@@ -10,6 +10,7 @@ var PdDemo = (function () {
   'use strict';
 
   var PREFIX = 'demo:';
+  var EXAMPLE_LINK = 'https://example.com/';
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   function ordinal(n) {
@@ -56,6 +57,10 @@ var PdDemo = (function () {
       var item = result.item;
       item.key = PREFIX + item.key;
       item.latest = 'Example: ' + item.latest;
+      // Placeholder links (example.com is reserved for documentation) so the
+      // example shows where "Open form" and "Open email" will appear.
+      item.mailUrl = EXAMPLE_LINK;
+      if (item.deadline) item.formUrl = EXAMPLE_LINK;
       if (example.shortlisted) {
         item.shortlisted = example.shortlisted;
         var sent = PdDates.toParts(meta.dateMs, offsetFn);

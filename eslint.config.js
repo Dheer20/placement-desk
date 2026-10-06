@@ -17,7 +17,7 @@ const googleServices = [
 const readonly = (names) => Object.fromEntries(names.map((n) => [n, 'readonly']));
 
 module.exports = [
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
+  { ignores: ['dist/**', 'install/**', 'node_modules/**', 'coverage/**'] },
   js.configs.recommended,
   {
     files: ['src/**/*.js'],

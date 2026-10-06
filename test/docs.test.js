@@ -50,6 +50,23 @@ test('docs: the permissions explained in PRIVACY.md are exactly the ones request
   assert.equal(rows.length, scopes.length, 'one explained row per requested permission');
 });
 
+test('docs: the copy-and-paste install files match the source (run "npm run build")', () => {
+  const { bundle } = require('../scripts/build.js');
+  const lf = (s) => s.replace(/\r\n/g, '\n');
+  assert.equal(lf(read('install/Code.gs')), bundle().text, 'install/Code.gs is out of date');
+  assert.equal(lf(read('install/appsscript.json')), lf(read('src/appsscript.json')), 'install/appsscript.json is out of date');
+});
+
+test('docs: the single-file version loads on its own and defines every entry point', () => {
+  const vm = require('node:vm');
+  const context = vm.createContext({});
+  vm.runInContext(read('install/Code.gs'), context, { filename: 'install/Code.gs' });
+  for (const name of ['onOpen', 'pdSetup', 'pdRunNow', 'pdScheduledRun', 'pdDailySweep', 'pdTurnOn', 'pdTurnOff', 'pdExample', 'pdExampleClear', 'pdCatchUp', 'pdPrefillSelected', 'pdShowAnswers', 'pdHelp']) {
+    assert.equal(typeof context[name], 'function', name + ' is missing from the single-file version');
+  }
+  assert.equal(vm.runInContext('PdSubject.parse("Acme Robotics Recruitment drive", { base: { y: 2026, m: 10, d: 5 } }).company', context), 'Acme Robotics');
+});
+
 test('docs: the menu items named in the README exist in the code', () => {
   const app = read('src/gas/App.js');
   const named = Array.from(read('README.md').matchAll(/\*\*Placement Desk > ([^*]+)\*\*/g)).map((m) => m[1].replace(/\s+/g, ' ').trim());

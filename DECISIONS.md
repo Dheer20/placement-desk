@@ -237,5 +237,40 @@ are asked to trust with their inbox.
 run through the real pipeline, without touching Gmail. The rows are removed
 by the menu or automatically on the first real check.
 
-**Why:** people can see what they are getting before granting any mail
-access.
+**Why:** people can see what they are getting before pointing it at their
+own mail. The example never calls Gmail. (Google still asks for the
+script's permissions the first time any menu item is used; that is how
+Apps Script works, not something the example needs.)
+
+## 20. A designed Dashboard tab
+
+**Decided:** the Dashboard is drawn on a 12-column grid with gridlines
+hidden: a title band, one "Next up" line with the most urgent to-do, four
+number tiles, then the lists. There is one accent colour; green and amber
+appear only where they mean something (on a list / look at this soon), and
+never as the only signal: the words say it too.
+
+**Why:** the question the tab answers is "what do I need to do next?", and
+it should be answered within a few seconds of opening it. Every tile counts
+exactly what the list under it shows, so the numbers cannot disagree with
+the rows.
+
+**Cost:** the layout uses merged cells, so the Dashboard is for reading.
+Sorting, filtering and notes belong on the Drives tab.
+
+## 21. Checked on a real Sheet, not only against fakes
+
+A temporary self-check was run inside a real Google Sheet before release
+(it is not part of the shipped code). It confirmed, on Google's own
+services: escaped text never becomes a formula, including after a rewrite;
+a spreadsheet attachment can be unzipped, read and matched; the timezone
+database is available; read-only Gmail access answers; and a timed run with
+nobody at the keyboard can reach its Sheet, reach Gmail and redraw the
+Dashboard under the narrow one-Sheet permission. It also showed that
+plain-text formatting alone does not stop formulas (see 10), which the
+fakes had assumed correctly but could not prove.
+
+**Not yet checked on real mail:** a full run over a real placement mailbox
+from inside Apps Script. The parsing rules were tuned on real subject lines
+and are covered by tests, but the first real runs may surface formats the
+rules do not know.

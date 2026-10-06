@@ -82,6 +82,13 @@ var PdStore = (function () {
     sh.getRange(2, COL.mark, rows, 1).clearDataValidations();
     markDropdown(sh, sh.getLastRow() - 1);
     sh.getRange(2, COL.text, rows, COL.textCount).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    // A quiet table: no gridlines, light alternate rows, one font.
+    sh.setHiddenGridlines(true);
+    sh.getBandings().forEach(function (banding) { banding.remove(); });
+    sh.getRange(2, 1, rows, DRIVE_WIDTHS.length).setFontFamily(LOOK.font).setVerticalAlignment('middle')
+      .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false)
+      .setFirstRowColor(LOOK.page).setSecondRowColor(LOOK.zebra);
+    sh.setRowHeightsForced(2, Math.min(rows, 200), 26);
     var listColumn = sh.getRange(2, 12, rows, 1);
     var todoColumn = sh.getRange(2, 2, rows, 1);
     sh.setConditionalFormatRules([
@@ -541,6 +548,11 @@ var PdStore = (function () {
         });
       }
     });
+    // Paint the band's cell edges in the band colour, so it reads as one
+    // solid block in every view of the Sheet.
+    var bandRows = 0;
+    while (bandRows < n && /^(?:band-pad|title|subtitle)$/.test(lines[bandRows].kind)) bandRows++;
+    if (bandRows) sh.getRange(1, 1, bandRows, width).setBorder(true, true, true, true, true, true, LOOK.accent, SpreadsheetApp.BorderStyle.SOLID);
     sh.setTabColor(LOOK.accent);
   }
 

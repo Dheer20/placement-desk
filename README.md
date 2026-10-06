@@ -13,6 +13,11 @@ on the list.
 It is free, it runs in your own Google account, and it can only *read* your
 mail.
 
+![The Dashboard tab: a title band, the next thing to do, four number tiles, then the to-do list and what is coming up](docs/images/dashboard.png)
+
+*The Dashboard tab, shown with the built-in example. Every company on it is
+made up.*
+
 ## What it does
 
 - **Finds the emails that are for you.** Your batch and your branch, "all
@@ -56,15 +61,18 @@ need to know how to program.
    Name it "Placement Desk".
 2. In the menu, choose **Extensions > Apps Script**. A new tab opens with a
    code editor.
-3. Delete the few lines of code that are there.
-4. Open [`Code.gs` on the latest release](https://github.com/Dheer20/placement-desk/releases/latest),
-   copy all of it, and paste it into the editor.
-5. On the left, click the gear icon (**Project Settings**) and tick
+3. At the top, click **Untitled project** and rename it to
+   "Placement Desk".
+4. Delete the few lines of code that are there.
+5. Open [`install/Code.gs`](install/Code.gs) on this page, click the
+   **Copy raw file** button (two overlapping squares, top right of the
+   file), and paste it into the editor.
+6. On the left, click the gear icon (**Project Settings**) and tick
    **Show "appsscript.json" manifest file in editor**.
-6. Go back to the editor (the `< >` icon). Click `appsscript.json`, delete
-   what is there, and paste in
-   [`appsscript.json` from the same release](https://github.com/Dheer20/placement-desk/releases/latest).
-7. Press **Ctrl + S** to save, close the tab, and **reload your Sheet**.
+7. Go back to the editor (the `< >` icon). Click `appsscript.json`, delete
+   what is there, and paste in [`install/appsscript.json`](install/appsscript.json),
+   copied the same way.
+8. Press **Ctrl + S** to save, close the tab, and **reload your Sheet**.
 
 A new menu called **Placement Desk** appears next to Help. (It can take a
 few seconds after the reload.)
@@ -72,13 +80,16 @@ few seconds after the reload.)
 ### 2. Give it permission
 
 1. Choose **Placement Desk > 1. Set up this sheet**.
-2. Google says "Authorisation required". Click **OK** and pick your account.
+2. Google says "Authorization required". Click **OK** and pick your account.
+   (If nothing opens, your browser blocked the pop-up: allow pop-ups for
+   Google Sheets and try again.)
 3. Google shows **"Google hasn't verified this app"**. This is expected:
    the "app" is the script you just pasted into your own Sheet, and Google
    only verifies apps published to the public. Click **Advanced**, then
    **Go to Placement Desk (unsafe)**.
-4. Review the list of permissions and click **Allow**. What each one means
-   is explained in [PRIVACY.md](PRIVACY.md#the-permissions-google-will-ask-you-for).
+4. Google lists the permissions. Tick **Select all**, then **Continue**.
+   What each one means is explained in
+   [PRIVACY.md](PRIVACY.md#the-permissions-google-will-ask-you-for).
 5. Choose **Placement Desk > 1. Set up this sheet** once more. Your tabs are
    created.
 
@@ -109,9 +120,9 @@ name exactly as it appears on college lists.
 
 To load older emails as well, choose **Catch up on the last few weeks**.
 
-Want to see what it looks like before connecting your mail? Choose
-**See an example first**. It adds made-up rows that you can remove from the
-same menu.
+Want to look around before pointing it at your mail? Choose
+**See an example first**. It adds made-up rows, never reads your mail, and
+the rows can be removed from the same menu.
 
 ## Using it
 
@@ -124,6 +135,10 @@ same menu.
 | **Profile** | Your details, for list checks and forms. |
 | **Settings** | Your college's addresses, your batch and branch, and options. |
 | **Log** | When each check ran and how many emails it handled. |
+
+![The Drives tab: one row per company, with the to-do, type, who it is for and the dates](docs/images/drives.png)
+
+*The Drives tab (example data): one row per company.*
 
 ### Your columns
 

@@ -34,6 +34,7 @@ function pdToast_(message) {
 
 function pdSetup() {
   var created = PdStore.ensureTabs();
+  PdStore.tidy();
   var settingsTab = PdStore.sheet(PdStore.TAB.settings);
   if (settingsTab) SpreadsheetApp.getActiveSpreadsheet().setActiveSheet(settingsTab);
   pdToast_(created.length

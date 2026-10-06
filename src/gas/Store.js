@@ -56,6 +56,43 @@ var PdStore = (function () {
     return sh;
   }
 
+  // Widths for the Drives columns A to Q, wide enough that nothing is cut off.
+  var DRIVE_WIDTHS = [120, 330, 210, 125, 65, 150, 150, 150, 170, 150, 190, 200, 380, 90, 90, 90, 240];
+
+  /** Layout only (widths, frozen panes, colours). Never touches a value. */
+  function tidyDrives(sh) {
+    DRIVE_WIDTHS.forEach(function (width, i) { sh.setColumnWidth(i + 1, width); });
+    sh.setFrozenRows(1);
+    sh.setFrozenColumns(3);
+    var rows = sh.getMaxRows() - 1;
+    sh.getRange(2, COL.mark, rows, 1).clearDataValidations();
+    markDropdown(sh, sh.getLastRow() - 1);
+    sh.getRange(2, COL.text, rows, COL.textCount).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    var listColumn = sh.getRange(2, 12, rows, 1);
+    var todoColumn = sh.getRange(2, 2, rows, 1);
+    sh.setConditionalFormatRules([
+      SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('YES').setBackground('#d9ead3').setBold(true).setRanges([listColumn]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('Check').setBackground('#fff2cc').setRanges([listColumn]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('Could not').setBackground('#fff2cc').setRanges([listColumn]).build(),
+      SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('You are on the list').setBackground('#d9ead3').setBold(true).setRanges([todoColumn]).build()
+    ]);
+  }
+
+  /** Re-apply the layout of the tool's tabs. Safe to run at any time. */
+  function tidy() {
+    var drives = sheet(TAB.drives);
+    if (drives) tidyDrives(drives);
+  }
+
+  /** The "My mark" dropdown, on the rows that hold drives (not a thousand empty ones). */
+  function markDropdown(sh, rowCount) {
+    if (rowCount < 1) return;
+    var rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(PdPlan.MARKS.filter(function (m) { return m !== ''; }), true)
+      .setAllowInvalid(true).build();
+    sh.getRange(2, COL.mark, rowCount, 1).setDataValidation(rule);
+  }
+
   /**
    * Create any missing tabs. Existing tabs and everything typed into them
    * are left exactly as they are, so this is safe to run again at any time.
@@ -77,17 +114,8 @@ var PdStore = (function () {
     });
 
     make(TAB.drives, DRIVE_HEAD, 1, function (sh) {
-      var rule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(PdPlan.MARKS.filter(function (m) { return m !== ''; }), true)
-        .setAllowInvalid(true).build();
-      sh.getRange(2, COL.mark, sh.getMaxRows() - 1, 1).setDataValidation(rule);
       sh.hideColumns(COL.key, 2);
-      sh.setColumnWidth(COL.mark, 110).setColumnWidth(2, 260).setColumnWidth(3, 200).setColumnWidth(13, 320).setColumnWidth(COL.notes, 220);
-      var listColumn = sh.getRange(2, 12, sh.getMaxRows() - 1, 1);
-      sh.setConditionalFormatRules([
-        SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('YES').setBackground('#d9ead3').setBold(true).setRanges([listColumn]).build(),
-        SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('Check').setBackground('#fff2cc').setRanges([listColumn]).build()
-      ]);
+      tidyDrives(sh);
     });
 
     make(TAB.lists, LIST_HEAD, 2);
@@ -203,6 +231,7 @@ var PdStore = (function () {
     function escaped(block) {
       return block.map(function (row) { return row.map(PdText.safeCell); });
     }
+    markDropdown(sh, count);
     plainText(textRange).setValues(escaped(text));
     linkRange.setRichTextValues(links);
     plainText(updatedRange).setValues(escaped(updated));
@@ -320,6 +349,7 @@ var PdStore = (function () {
     book: book,
     sheet: sheet,
     ensureTabs: ensureTabs,
+    tidy: tidy,
     readSettingsRows: readSettingsRows,
     readProfileRows: readProfileRows,
     readDrives: readDrives,

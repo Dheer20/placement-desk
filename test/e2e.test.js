@@ -428,4 +428,15 @@ test('e2e: the practice tab is updated and the coldest skill reaches the summary
   const dashboard = state.sheet('Dashboard').table().map((r) => r.join(' | ')).join('\n');
   assert.match(dashboard, /Practice that has gone cold/);
   assert.match(dashboard, /Linked lists, stacks, queues \| 25 days cold/);
+  assert.ok(!/Not started/.test(dashboard), 'skills never started are not listed as cold');
+});
+
+test('e2e: a new user is not nagged about practice they have not started', () => {
+  const { state, run } = start();
+  run('scheduled', ist(2026, 10, 5, 18));
+  const dashboard = state.sheet('Dashboard').table().map((r) => r.join(' | ')).join('\n');
+  assert.match(dashboard, /Nothing has gone cold/);
+  assert.ok(!/Not started/.test(dashboard));
+  assert.ok(!/Practice:/.test(state.sent[0].body));
+  assert.equal(state.sheet('Practice').table()[1][4], 'Not started', 'the Practice tab itself still says so');
 });

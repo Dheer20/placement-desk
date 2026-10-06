@@ -309,7 +309,7 @@ test('coach: skills are on track, due or cold by days since last practice', () =
     ['', '', ''],
     ['Aptitude', 1, 'On track']
   ]);
-  assert.equal(review.nudge, 'Mock interview (not started) +2 more due');
+  assert.equal(review.nudge, 'Dynamic programming (20 days since last time) +1 more due', 'a skill never started is not "cold"');
 });
 
 test('coach: nothing due means no nudge', () => {

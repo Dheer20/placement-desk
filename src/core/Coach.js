@@ -43,7 +43,9 @@ var PdCoach = (function () {
       rows.push({ name: name, days: days, status: status, cold: days - every, task: skill.task || '' });
     });
 
-    var due = rows.filter(function (r) { return r.name && r.status !== 'On track'; });
+    // Only skills the student has started can "go cold". A new user is not
+    // nagged about a list they have not touched yet.
+    var due = rows.filter(function (r) { return r.name && r.days !== '' && r.status !== 'On track'; });
     due.sort(function (a, b) { return b.cold - a.cold; });
     var nudge = '';
     if (due.length) {

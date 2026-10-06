@@ -183,7 +183,7 @@ var PdPlan = (function () {
       return [human(r.item.eventDate), PdSubject.KIND_LABEL[r.item.kind] || '', name(r.item), r.item.venue || '', mark(r.mark) === 'applied' ? 'Applied' : ''];
     });
 
-    var practice = (extra.practice || []).filter(function (p) { return p.name && p.status && p.status !== 'On track'; })
+    var practice = (extra.practice || []).filter(function (p) { return p.name && p.days !== '' && p.status && p.status !== 'On track'; })
       .sort(function (a, b) { return b.cold - a.cold; }).slice(0, 8).map(function (p) {
         return [p.name, p.status, p.task && PdText.safeUrl(p.task) ? link('Open task', PdText.safeUrl(p.task)) : (p.task || '')];
       });
@@ -196,7 +196,7 @@ var PdPlan = (function () {
       sections: [
         { title: 'To do', header: ['When', 'What', 'Company', 'Form', 'Email'], rows: todos, empty: 'Nothing to do right now.' },
         { title: 'Coming up (next 14 days)', header: ['When', 'What', 'Company', 'Where', 'Your mark'], rows: coming, empty: 'Nothing scheduled.' },
-        { title: 'Practice that has gone cold', header: ['Skill', 'Status', 'Next task'], rows: practice, empty: 'All skills on track.' }
+        { title: 'Practice that has gone cold', header: ['Skill', 'Status', 'Next task'], rows: practice, empty: 'Nothing has gone cold. To track a skill, put a date under Practice > Last practised.' }
       ]
     };
   }

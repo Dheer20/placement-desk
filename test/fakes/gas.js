@@ -55,6 +55,7 @@ class FakeSheet {
   }
   insertRowsAfter(after, count) { this.maxRows += count; return lenient(this); }
   deleteRows(start, count) { this.cells.splice(start - 1, count); return lenient(this); }
+  deleteRow(row) { return this.deleteRows(row, 1); }
   hideSheet() { this.hidden = true; return lenient(this); }
   isSheetHidden() { return this.hidden; }
   clear() { this.cells = []; this.rich = new Map(); return lenient(this); }

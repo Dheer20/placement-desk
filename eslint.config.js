@@ -6,7 +6,7 @@ const globals = require('globals');
 // Each source file defines one of these; all files share one global scope
 // in Apps Script, so they are globals to each other.
 const namespaces = [
-  'PdBody', 'PdCoach', 'PdConfig', 'PdDates', 'PdDedupe', 'PdEligibility', 'PdFiles', 'PdMatch', 'PdMime',
+  'PdBody', 'PdCoach', 'PdConfig', 'PdDates', 'PdDedupe', 'PdDemo', 'PdEligibility', 'PdFiles', 'PdMatch', 'PdMime',
   'PdPipeline', 'PdPlan', 'PdPrefill', 'PdQueries', 'PdSubject', 'PdText',
   'PdForms', 'PdLists', 'PdMail', 'PdRunner', 'PdStore'
 ];

@@ -90,6 +90,8 @@ var PdRunner = (function () {
       stats.fresh = fresh.length;
 
       // ---- 2 and 3. read and understand ------------------------------------
+      // Example rows from "See an example first" make way for the real thing.
+      PdStore.deleteDriveRows(PdStore.readDrives().filter(function (e) { return PdDemo.isDemoKey(e.key); }).map(function (e) { return e.row; }));
       var stored = PdStore.readDrives();
       var rowByKey = {};
       var items = {};

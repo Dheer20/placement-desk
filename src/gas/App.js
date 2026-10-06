@@ -6,7 +6,7 @@
  * in the Pd* objects.
  */
 
-/* exported onOpen, pdSetup, pdRunNow, pdCatchUp, pdScheduledRun, pdDailySweep, pdTurnOn, pdTurnOff, pdPrefillSelected, pdShowAnswers, pdHelp */
+/* exported onOpen, pdSetup, pdRunNow, pdCatchUp, pdExample, pdExampleClear, pdScheduledRun, pdDailySweep, pdTurnOn, pdTurnOff, pdPrefillSelected, pdShowAnswers, pdHelp */
 
 var PD_TIMED = ['pdScheduledRun', 'pdDailySweep'];
 
@@ -15,6 +15,9 @@ function onOpen() {
     .addItem('1. Set up this sheet', 'pdSetup')
     .addItem('2. Check my email now', 'pdRunNow')
     .addItem('3. Turn on automatic checks', 'pdTurnOn')
+    .addSeparator()
+    .addItem('See an example first', 'pdExample')
+    .addItem('Remove the example rows', 'pdExampleClear')
     .addSeparator()
     .addItem('Catch up on the last few weeks', 'pdCatchUp')
     .addItem('Pre-fill the form for the selected row', 'pdPrefillSelected')
@@ -54,6 +57,41 @@ function pdRunNow() {
 function pdCatchUp() {
   pdToast_('Looking back over the last few weeks. This can take a few minutes\u2026');
   pdToast_(pdReport_(PdRunner.run('catchup')));
+}
+
+/** Redraw the Dashboard from whatever is on the Drives tab right now. */
+function pdRedraw_() {
+  var config = PdConfig.readSettings(PdStore.readSettingsRows());
+  var offsetFn = PdRunner.offsetFor(config.settings.timezone);
+  var nowMs = Date.now();
+  var planned = PdStore.readDrives().filter(function (e) { return e.item; }).map(function (e) {
+    return { item: e.item, mark: e.mark, todo: PdPlan.todo(e.item, e.mark, nowMs, offsetFn), row: e.row };
+  });
+  var coach = PdCoach.review(PdStore.readPractice(), PdDates.toParts(nowMs, offsetFn), config.settings.order);
+  PdStore.writeDashboard(PdPlan.dashboard(planned, { problems: [], practice: coach.rows, checkedMs: nowMs }, nowMs, offsetFn));
+}
+
+/** Made-up rows so a new user can see how the dashboard reads. No Gmail involved. */
+function pdExample() {
+  PdStore.ensureTabs();
+  var offsetFn = PdRunner.offsetFor(PdConfig.readSettings(PdStore.readSettingsRows()).settings.timezone);
+  var nowMs = Date.now();
+  var existing = {};
+  PdStore.readDrives().forEach(function (e) { if (e.key) existing[e.key] = e; });
+  var entries = PdDemo.items(nowMs, offsetFn).map(function (item) {
+    var current = existing[item.key];
+    return { row: current ? current.row : 0, item: item, todo: PdPlan.todo(item, current ? current.mark : '', nowMs, offsetFn) };
+  });
+  PdStore.writeDrives(entries, offsetFn);
+  pdRedraw_();
+  pdToast_('Example rows added. They are made up. Remove them any time from the Placement Desk menu.');
+}
+
+function pdExampleClear() {
+  var rows = PdStore.readDrives().filter(function (e) { return PdDemo.isDemoKey(e.key); }).map(function (e) { return e.row; });
+  PdStore.deleteDriveRows(rows);
+  pdRedraw_();
+  pdToast_(rows.length ? rows.length + ' example rows removed.' : 'There were no example rows.');
 }
 
 function pdScheduledRun() {

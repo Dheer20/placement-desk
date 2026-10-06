@@ -1,0 +1,15 @@
+#!/bin/sh
+# Runs before every commit. Turn it on once with:  npm run hooks
+#
+# 1. Blocks personal data and hidden characters (scripts/check-personal-data.js).
+# 2. Blocks secrets, if gitleaks is installed (https://github.com/gitleaks/gitleaks).
+
+set -e
+
+node scripts/check-personal-data.js
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner --redact
+else
+  echo "pre-commit: gitleaks is not installed, so the secret scan was skipped (CI still runs it)."
+fi

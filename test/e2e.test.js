@@ -351,6 +351,38 @@ test('e2e: only read-only Gmail and this one Sheet are required', () => {
   }
 });
 
+test('e2e: the example fills the dashboard with made-up rows and removes them cleanly', () => {
+  const { state, g, drives } = start();
+  const sheet = state.sheet('Drives');
+  sheet.cells.push(['Applied', 'My own row', 'Off-campus: Gale Systems', '', '', '', '', '', '', '', '', '', '', '', '', '', 'keep me', '', '']);
+  g.pdExample();
+  const rows = drives();
+  assert.equal(rows.filter((r) => String(r._key).startsWith('demo:')).length, 6);
+  assert.deepEqual(rows.filter((r) => r._key).map((r) => r.Type), ['Placement drive', 'Internship drive', 'Shortlist', 'Test', 'Shortlist', 'Talk']);
+  assert.match(company(rows, 'Acme')['To do'], /^Register by /);
+  assert.equal(company(rows, 'Cobalt')['On the list?'], 'YES – you are on the list');
+  const dashboard = state.sheet('Dashboard').table().map((r) => r.join(' | ')).join('\n');
+  assert.match(dashboard, /You are on the list: Technical Interviews/);
+  assert.deepEqual(state.metadataFetched, [], 'the example never touches Gmail');
+
+  g.pdExample();
+  assert.equal(drives().filter((r) => String(r._key).startsWith('demo:')).length, 6, 'running it twice does not duplicate rows');
+
+  g.pdExampleClear();
+  const left = drives();
+  assert.equal(left.length, 1);
+  assert.deepEqual([left[0]['My mark'], left[0].Company, left[0]['My notes']], ['Applied', 'Off-campus: Gale Systems', 'keep me']);
+});
+
+test('e2e: example rows are cleared by the first real check and never reach the summary', () => {
+  const { state, g, run, drives } = start();
+  g.pdExample();
+  run('scheduled', ist(2026, 10, 5, 18));
+  assert.equal(drives().filter((r) => String(r._key).startsWith('demo:')).length, 0);
+  assert.ok(!/Cobalt|Dunmore|Example/.test(JSON.stringify(state.sent)));
+  assert.equal(drives().length, 3);
+});
+
 test('e2e: a second check while one is running does nothing', () => {
   const { state, run, drives } = start();
   state.locked = true;

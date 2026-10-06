@@ -204,6 +204,13 @@ var PdStore = (function () {
     plainText(hiddenRange).setValues(hidden);
   }
 
+  /** Delete the given rows of the Drives tab (whole rows, bottom first). */
+  function deleteDriveRows(rowNumbers) {
+    var sh = sheet(TAB.drives);
+    if (!sh) return;
+    rowNumbers.slice().sort(function (a, b) { return b - a; }).forEach(function (row) { sh.deleteRow(row); });
+  }
+
   function appendRows(name, head, rows) {
     if (!rows.length) return;
     var sh = sheet(name) || ensure(name, head);
@@ -312,6 +319,7 @@ var PdStore = (function () {
     readProfileRows: readProfileRows,
     readDrives: readDrives,
     writeDrives: writeDrives,
+    deleteDriveRows: deleteDriveRows,
     appendListChecks: appendListChecks,
     appendLog: appendLog,
     readSeen: readSeen,
